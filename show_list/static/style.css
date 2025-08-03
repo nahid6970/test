@@ -27,16 +27,22 @@ body {
     border: 1px solid #404040;
     border-radius: 5px;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .show-card a {
     text-decoration: none;
     color: #e0e0e0;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 .show-card img {
     width: 100%;
-    height: auto;
+    height: 300px;
+    object-fit: cover;
 }
 
 .show-card h3, .show-card p {
