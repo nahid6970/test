@@ -12,11 +12,12 @@
         <div class="show-cover">
             <img src="{{ show.cover_image }}" alt="{{ show.title }}">
             <h2>{{ show.title }}</h2>
-            <form action="{{ url_for('add_episode', show_id=show.id) }}" method="post">
-                <input type="text" name="title" placeholder="New episode title" required>
+            <form action="{{ url_for('add_episode', show_id=show.id) }}" method="post" style="display: flex; gap: 10px;">
+                <input type="text" name="title" placeholder="New episode title" required style="flex-grow: 1;">
                 <button type="submit">+ Add</button>
             </form>
         </div>
+        <div class="episode-list">
         <div class="episode-list">
             <ul>
                 {% for episode in show.episodes %}
