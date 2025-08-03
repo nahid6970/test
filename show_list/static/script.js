@@ -1,9 +1,11 @@
 function openAddShowModal() {
     document.getElementById('addShowModal').style.display = 'block';
+    document.body.classList.add('modal-open');
 }
 
 function closeAddShowModal() {
     document.getElementById('addShowModal').style.display = 'none';
+    document.body.classList.remove('modal-open');
 }
 
 async function openEditShowModal(showId) {
@@ -18,10 +20,12 @@ async function openEditShowModal(showId) {
     document.getElementById('editShowForm').action = `/edit_show/${show.id}`;
 
     document.getElementById('editShowModal').style.display = 'block';
+    document.body.classList.add('modal-open');
 }
 
 function closeEditShowModal() {
     document.getElementById('editShowModal').style.display = 'none';
+    document.body.classList.remove('modal-open');
 }
 
 async function openEditEpisodeModal(showId, episodeId) {
@@ -34,10 +38,12 @@ async function openEditEpisodeModal(showId, episodeId) {
     document.getElementById('editEpisodeForm').action = `/edit_episode/${showId}/${episode.id}`;
 
     document.getElementById('editEpisodeModal').style.display = 'block';
+    document.body.classList.add('modal-open');
 }
 
 function closeEditEpisodeModal() {
     document.getElementById('editEpisodeModal').style.display = 'none';
+    document.body.classList.remove('modal-open');
 }
 
 // Close modal if user clicks outside of it
@@ -48,9 +54,12 @@ window.onclick = function(event) {
 
     if (event.target == addModal) {
         addModal.style.display = 'none';
+        document.body.classList.remove('modal-open');
     } else if (event.target == editShowModal) {
         editShowModal.style.display = 'none';
+        document.body.classList.remove('modal-open');
     } else if (event.target == editEpisodeModal) {
         editEpisodeModal.style.display = 'none';
+        document.body.classList.remove('modal-open');
     }
 }

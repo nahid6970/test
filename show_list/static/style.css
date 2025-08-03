@@ -26,8 +26,11 @@ body {
     top: 0;
     width: 100%; /* Full width */
     height: 100%; /* Full height */
-    overflow: auto; /* Enable scroll if needed */
     background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+body.modal-open {
+    overflow: hidden;
 }
 
 .modal-content {
@@ -38,6 +41,8 @@ body {
     width: 80%; /* Could be more or less, depending on screen size */
     border-radius: 8px;
     position: relative;
+    max-height: 70vh; /* Limit modal content height */
+    overflow-y: auto; /* Enable scrolling for modal content */
 }
 
 .close {
