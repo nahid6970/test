@@ -96,5 +96,219 @@
                 "watched": false
             }
         ]
+    },
+    {
+        "id": 3,
+        "title": "Re - ZERO",
+        "year": "2005",
+        "cover_image": "https://e1.pngegg.com/pngimages/333/105/png-clipart-anime-2016-spring-season-icon-re-zero-kara-hajimeru-isekai-seikatsu-re-zero-starting-life-in-another-world-2016-thumbnail.png",
+        "directory_path": "D:\\Downloads\\@Sonarr\\Re - ZERO, Starting Life in Another World",
+        "episodes": [
+            {
+                "id": 41,
+                "title": "Re - ZERO, Starting Life in Another World - s03e16 - [66] - The Result of the Battle for Priestella WEBDL-1080p - [ToonsHub]",
+                "watched": false
+            },
+            {
+                "id": 40,
+                "title": "Re - ZERO, Starting Life in Another World - s03e15 - [65] - A Hideous Dinner Party WEBDL-1080p - [Erai-raws]",
+                "watched": false
+            },
+            {
+                "id": 39,
+                "title": "Re - ZERO, Starting Life in Another World - s03e14 - [64] - Theresia van Astrea WEBDL-1080p - [Erai-raws]",
+                "watched": false
+            },
+            {
+                "id": 38,
+                "title": "Re - ZERO, Starting Life in Another World - s03e13 - [63] - The Warrior's Commendation WEBDL-1080p - [ToonsHub]",
+                "watched": false
+            },
+            {
+                "id": 37,
+                "title": "Re - ZERO, Starting Life in Another World - s03e12 - [62] - Regulus Corneas WEBDL-1080p - [Erai-raws]",
+                "watched": false
+            },
+            {
+                "id": 36,
+                "title": "Re - ZERO, Starting Life in Another World - s03e11 - [61] - Liliana Masquerade WEBDL-1080p - [VARYG]",
+                "watched": false
+            },
+            {
+                "id": 35,
+                "title": "Re - ZERO, Starting Life in Another World - s03e10 - [60] - The Plan to Conquer Greed WEBDL-1080p - [FLE]",
+                "watched": false
+            },
+            {
+                "id": 34,
+                "title": "Re - ZERO, Starting Life in Another World - s03e09 - [59] - City Scramble WEBDL-1080p - [FLE]",
+                "watched": false
+            },
+            {
+                "id": 33,
+                "title": "Re - ZERO, Starting Life in Another World - s03e08 - [58] - The One I'll Love Someday WEBDL-1080p - [VARYG]",
+                "watched": false
+            },
+            {
+                "id": 32,
+                "title": "Re - ZERO, Starting Life in Another World - s03e07 - [57] - The Newest of Heroes and the Most Ancient of Heroes WEBDL-1080p - [VARYG]",
+                "watched": false
+            },
+            {
+                "id": 31,
+                "title": "Re - ZERO, Starting Life in Another World - s03e06 - [56] - Conditions of the Knight WEBDL-1080p - [VARYG]",
+                "watched": false
+            },
+            {
+                "id": 30,
+                "title": "Re - ZERO, Starting Life in Another World - s03e05 - [55] - A Dark Torrent HDTV-1080p - [SubsPlease]",
+                "watched": false
+            },
+            {
+                "id": 29,
+                "title": "Re - ZERO, Starting Life in Another World - s03e04 - [54] - Operation - Take Back the Government Office HDTV-1080p - [SubsPlease]",
+                "watched": false
+            },
+            {
+                "id": 28,
+                "title": "Re - ZERO, Starting Life in Another World - s03e03 - [53] - Gorgeous Tiger WEBDL-1080p - [VARYG]",
+                "watched": false
+            },
+            {
+                "id": 27,
+                "title": "Re - ZERO, Starting Life in Another World - s03e02 - [52] - A Showdown of Fire and Ice WEBDL-1080p - [ToonsHub]",
+                "watched": false
+            },
+            {
+                "id": 26,
+                "title": "Re - ZERO, Starting Life in Another World - s03e01 - [51] - Theatrical Malice WEBDL-1080p - [Sonarr]",
+                "watched": false
+            },
+            {
+                "id": 25,
+                "title": "Re - ZERO, Starting Life in Another World - s01e25 - [25] - That's All This Story Is About Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 24,
+                "title": "Re - ZERO, Starting Life in Another World - s01e24 - [24] - The Self-Proclaimed Knight and the Greatest Knight Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 23,
+                "title": "Re - ZERO, Starting Life in Another World - s01e23 - [23] - Nefarious Sloth Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 22,
+                "title": "Re - ZERO, Starting Life in Another World - s01e22 - [22] - A Flash of Sloth Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 21,
+                "title": "Re - ZERO, Starting Life in Another World - s01e21 - [21] - A Wager That Defies Despair Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 20,
+                "title": "Re - ZERO, Starting Life in Another World - s01e20 - [20] - Wilhelm van Astrea Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 19,
+                "title": "Re - ZERO, Starting Life in Another World - s01e19 - [19] - Battle Against the White Whale Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 18,
+                "title": "Re - ZERO, Starting Life in Another World - s01e18 - [18] - From Zero Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 17,
+                "title": "Re - ZERO, Starting Life in Another World - s01e17 - [17] - Disgrace in the Extreme Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 16,
+                "title": "Re - ZERO, Starting Life in Another World - s01e16 - [16] - The Greed of a Pig Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 15,
+                "title": "Re - ZERO, Starting Life in Another World - s01e15 - [15] - The Outside of Madness Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 14,
+                "title": "Re - ZERO, Starting Life in Another World - s01e14 - [14] - The Sickness Called Despair Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 13,
+                "title": "Re - ZERO, Starting Life in Another World - s01e13 - [13] - Self-Proclaimed Knight Natsuki Subaru Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 12,
+                "title": "Re - ZERO, Starting Life in Another World - s01e12 - [12] - Return to the Capital Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 11,
+                "title": "Re - ZERO, Starting Life in Another World - s01e11 - [11] - Rem Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 10,
+                "title": "Re - ZERO, Starting Life in Another World - s01e10 - [10] - Fanatical Methods Like a Demon Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 9,
+                "title": "Re - ZERO, Starting Life in Another World - s01e09 - [9] - The Meaning of Courage Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 8,
+                "title": "Re - ZERO, Starting Life in Another World - s01e08 - [8] - I Cried, Cried My Lungs Out, and Stopped Crying Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 7,
+                "title": "Re - ZERO, Starting Life in Another World - s01e07 - [7] - Natsuki Subaru's Restart Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 6,
+                "title": "Re - ZERO, Starting Life in Another World - s01e06 - [6] - The Sound of Chains Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 5,
+                "title": "Re - ZERO, Starting Life in Another World - s01e05 - [5] - The Morning of Our Promise Is Still Distant Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 4,
+                "title": "Re - ZERO, Starting Life in Another World - s01e04 - [4] - The Happy Roswaal Mansion Family Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 3,
+                "title": "Re - ZERO, Starting Life in Another World - s01e03 - [3] - Starting Life from Zero in Another World Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 2,
+                "title": "Re - ZERO, Starting Life in Another World - s01e02 - [2] - Reunion with the Witch Bluray-1080p - [Flugel]",
+                "watched": false
+            },
+            {
+                "id": 1,
+                "title": "Re - ZERO, Starting Life in Another World - s01e01 - [1] - The End of the Beginning and the Beginning of the End Bluray-1080p - [Flugel]",
+                "watched": false
+            }
+        ]
     }
 ]

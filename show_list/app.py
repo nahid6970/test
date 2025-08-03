@@ -34,18 +34,19 @@ def scan_and_update_episodes():
             dir_path = show['directory_path']
             if os.path.isdir(dir_path):
                 existing_episode_titles = {e['title'] for e in show['episodes']}
-                for filename in os.listdir(dir_path):
-                    name, ext = os.path.splitext(filename)
-                    if ext.lower() in ['.mp4', '.mkv', '.avi', '.mov', '.webm']:
-                        if name not in existing_episode_titles:
-                            new_episode = {
-                                'id': len(show['episodes']) + 1,
-                                'title': name,
-                                'watched': False
-                            }
-                            show['episodes'].insert(0, new_episode)
-                            existing_episode_titles.add(name)
-                            updated_shows = True
+                for root, _, files in os.walk(dir_path):
+                    for filename in files:
+                        name, ext = os.path.splitext(filename)
+                        if ext.lower() in ['.mp4', '.mkv', '.avi', '.mov', '.webm']:
+                            if name not in existing_episode_titles:
+                                new_episode = {
+                                    'id': len(show['episodes']) + 1,
+                                    'title': name,
+                                    'watched': False
+                                }
+                                show['episodes'].insert(0, new_episode)
+                                existing_episode_titles.add(name)
+                                updated_shows = True
             else:
                 print(f"Directory not found for {show['title']}: {dir_path}")
     if updated_shows:
