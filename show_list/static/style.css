@@ -38,7 +38,7 @@ body.modal-open {
     margin: 5% auto; /* Moved higher */
     padding: 20px;
     border: 1px solid #888;
-    width: 80%; /* Could be more or less, depending on screen size */
+    width: 60%; /* Reduced width */
     border-radius: 8px;
     position: relative;
     max-height: 70vh; /* Limit modal content height */
