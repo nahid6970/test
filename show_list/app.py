@@ -1,6 +1,7 @@
-
 import json
+import os
 from flask import Flask, render_template, request, redirect, url_for
+from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
 
@@ -24,6 +25,39 @@ def save_data(data):
     with open(DATA_FILE, 'w') as f:
         json.dump(data, f, indent=4)
 
+def scan_and_update_episodes():
+    print("Scanning for new episodes...")
+    shows = load_data()
+    updated_shows = False
+    for show in shows:
+        if 'directory_path' in show and show['directory_path']:
+            dir_path = show['directory_path']
+            if os.path.isdir(dir_path):
+                existing_episode_titles = {e['title'] for e in show['episodes']}
+                for filename in os.listdir(dir_path):
+                    name, ext = os.path.splitext(filename)
+                    if ext.lower() in ['.mp4', '.mkv', '.avi', '.mov', '.webm']:
+                        if name not in existing_episode_titles:
+                            new_episode = {
+                                'id': len(show['episodes']) + 1,
+                                'title': name,
+                                'watched': False
+                            }
+                            show['episodes'].insert(0, new_episode)
+                            existing_episode_titles.add(name)
+                            updated_shows = True
+            else:
+                print(f"Directory not found for {show['title']}: {dir_path}")
+    if updated_shows:
+        save_data(shows)
+        print("New episodes found and updated.")
+    else:
+        print("No new episodes found.")
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(func=scan_and_update_episodes, trigger="interval", minutes=1)
+scheduler.start()
+
 @app.route('/')
 def index():
     shows = load_data()
@@ -46,6 +80,7 @@ def add_show():
             'title': request.form['title'],
             'year': request.form['year'],
             'cover_image': request.form['cover_image'],
+            'directory_path': request.form.get('directory_path', ''),
             'episodes': []
         }
         shows.append(new_show)
@@ -63,6 +98,7 @@ def edit_show(show_id):
         show['title'] = request.form['title']
         show['year'] = request.form['year']
         show['cover_image'] = request.form['cover_image']
+        show['directory_path'] = request.form.get('directory_path', '')
         save_data(shows)
         return redirect(url_for('index'))
     return render_template('edit_show.html', show=show)

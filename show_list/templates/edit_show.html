@@ -16,6 +16,8 @@
         <input type="number" id="year" name="year" value="{{ show.year }}" required>
         <label for="cover_image">Cover Image URL:</label>
         <input type="url" id="cover_image" name="cover_image" value="{{ show.cover_image }}" required>
+        <label for="directory_path">Directory Path (Optional):</label>
+        <input type="text" id="directory_path" name="directory_path" value="{{ show.directory_path if show.directory_path else '' }}">
         <button type="submit">Save Changes</button>
     </form>
 </body>
