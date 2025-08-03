@@ -1,6 +1,6 @@
 import json
 import os
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
@@ -102,7 +102,8 @@ def edit_show(show_id):
         show['directory_path'] = request.form.get('directory_path', '')
         save_data(shows)
         return redirect(url_for('index'))
-    return render_template('edit_show.html', show=show)
+    else:
+        return jsonify(show)
 
 @app.route('/delete_show/<int:show_id>')
 def delete_show(show_id):
@@ -139,7 +140,8 @@ def edit_episode(show_id, episode_id):
         episode['title'] = request.form['title']
         save_data(shows)
         return redirect(url_for('show', show_id=show_id))
-    return render_template('edit_episode.html', show_id=show_id, episode=episode)
+    else:
+        return jsonify(episode)
 
 @app.route('/delete_episode/<int:show_id>/<int:episode_id>')
 def delete_episode(show_id, episode_id):
