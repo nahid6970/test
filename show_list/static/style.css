@@ -60,11 +60,14 @@ body {
 
 .show-details-container {
     display: flex;
+    align-items: flex-start;
 }
 
 .show-cover {
     flex: 1;
     margin-right: 20px;
+    position: sticky;
+    top: 20px;
 }
 
 .show-cover img {
@@ -73,6 +76,8 @@ body {
 
 .episode-list {
     flex: 2;
+    max-height: 80vh;
+    overflow-y: auto;
 }
 
 .episode-list ul {
