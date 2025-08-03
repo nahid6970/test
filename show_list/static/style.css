@@ -60,14 +60,12 @@ body {
 
 .show-details-container {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
 }
 
 .show-cover {
     flex: 1;
     margin-right: 20px;
-    position: sticky;
-    top: 20px;
 }
 
 .show-cover img {
