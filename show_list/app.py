@@ -56,7 +56,7 @@ def scan_and_update_episodes():
         print("No new episodes found.")
 
 scheduler = BackgroundScheduler()
-scheduler.add_job(func=scan_and_update_episodes, trigger="interval", minutes=1)
+scheduler.add_job(func=scan_and_update_episodes, trigger="interval", hours=2)
 scheduler.start()
 
 @app.route('/')
@@ -162,6 +162,11 @@ def toggle_watched(show_id, episode_id):
             save_data(shows)
             return redirect(url_for('show', show_id=show_id))
     return 'Episode not found', 404
+
+@app.route('/scan_manual/<int:show_id>')
+def scan_manual(show_id):
+    scan_and_update_episodes()
+    return redirect(url_for('show', show_id=show_id))
 
 if __name__ == '__main__':
     app.run(debug=True, port=5011)
