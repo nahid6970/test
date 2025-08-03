@@ -79,8 +79,8 @@ def add_show():
         new_show = {
             'id': len(shows) + 1,
             'title': request.form['title'],
-            'year': request.form['year'],
-            'cover_image': request.form['cover_image'],
+            'year': request.form.get('year', ''),
+            'cover_image': request.form.get('cover_image', ''),
             'directory_path': request.form.get('directory_path', ''),
             'episodes': []
         }
@@ -97,8 +97,8 @@ def edit_show(show_id):
         return 'Show not found', 404
     if request.method == 'POST':
         show['title'] = request.form['title']
-        show['year'] = request.form['year']
-        show['cover_image'] = request.form['cover_image']
+        show['year'] = request.form.get('year', '')
+        show['cover_image'] = request.form.get('cover_image', '')
         show['directory_path'] = request.form.get('directory_path', '')
         save_data(shows)
         return redirect(url_for('index'))

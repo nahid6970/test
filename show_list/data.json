@@ -1,16 +1,11 @@
 [
     {
-        "id": 2,
-        "title": "One Shit",
+        "id": 1,
+        "title": "Once Piece",
         "year": "1999",
         "cover_image": "https://m.media-amazon.com/images/M/MV5BMTNjNGU4NTUtYmVjMy00YjRiLTkxMWUtNzZkMDNiYjZhNmViXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg",
         "directory_path": "D:\\Downloads\\@Sonarr\\One Piece",
         "episodes": [
-            {
-                "id": 7,
-                "title": "One Piece - s22e52 - [1137] - I'm Sorry, Dad - Bonney's Tears and Kuma's Fist WEBDL-1080p - [Erai-raws] - Copy",
-                "watched": false
-            },
             {
                 "id": 6,
                 "title": "One Piece - s22e52 - [1137] - I'm Sorry, Dad - Bonney's Tears and Kuma's Fist WEBDL-1080p - [Erai-raws]",
@@ -44,10 +39,79 @@
         ]
     },
     {
+        "id": 2,
+        "title": "Andor",
+        "year": "2022",
+        "cover_image": "https://images.static-bluray.com/movies/covers/357360_front.jpg?t=1710341290",
+        "directory_path": "D:\\Downloads\\@Sonarr\\Andor",
+        "episodes": [
+            {
+                "id": 12,
+                "title": "Andor - S02E12 - Jedha, Kyber, Erso WEBRip-1080p",
+                "watched": false
+            },
+            {
+                "id": 11,
+                "title": "Andor - S02E11 - Who Else Knows WEBRip-1080p",
+                "watched": false
+            },
+            {
+                "id": 10,
+                "title": "Andor - S02E10 - Make It Stop WEBRip-1080p",
+                "watched": false
+            },
+            {
+                "id": 9,
+                "title": "Andor - S02E09 - Welcome to the Rebellion WEBRip-1080p",
+                "watched": false
+            },
+            {
+                "id": 8,
+                "title": "Andor - S02E08 - Who Are You WEBRip-1080p",
+                "watched": false
+            },
+            {
+                "id": 7,
+                "title": "Andor - S02E07 - Messenger WEBRip-1080p",
+                "watched": false
+            },
+            {
+                "id": 6,
+                "title": "Andor - S02E06 - What a Festive Evening WEBRip-1080p",
+                "watched": false
+            },
+            {
+                "id": 5,
+                "title": "Andor - S02E05 - I Have Friends Everywhere WEBRip-1080p",
+                "watched": false
+            },
+            {
+                "id": 4,
+                "title": "Andor - S02E04 - Ever Been to Ghorman WEBRip-1080p",
+                "watched": false
+            },
+            {
+                "id": 3,
+                "title": "Andor - S02E03 - Harvest WEBRip-1080p",
+                "watched": false
+            },
+            {
+                "id": 2,
+                "title": "Andor - S02E02 - Sagrona Teema WEBRip-1080p",
+                "watched": false
+            },
+            {
+                "id": 1,
+                "title": "Andor - S02E01 - One Year Later WEBRip-1080p",
+                "watched": false
+            }
+        ]
+    },
+    {
         "id": 3,
-        "title": "Re - ZERO",
-        "year": "2005",
-        "cover_image": "https://e1.pngegg.com/pngimages/333/105/png-clipart-anime-2016-spring-season-icon-re-zero-kara-hajimeru-isekai-seikatsu-re-zero-starting-life-in-another-world-2016-thumbnail.png",
+        "title": "Re: ZERO, Starting Life in Another World",
+        "year": "2016",
+        "cover_image": "https://cdn.europosters.eu/image/750/46586.jpg",
         "directory_path": "D:\\Downloads\\@Sonarr\\Re - ZERO, Starting Life in Another World",
         "episodes": [
             {
@@ -253,6 +317,35 @@
             {
                 "id": 1,
                 "title": "Re - ZERO, Starting Life in Another World - s01e01 - [1] - The End of the Beginning and the Beginning of the End Bluray-1080p - [Flugel]",
+                "watched": false
+            }
+        ]
+    },
+    {
+        "id": 4,
+        "title": "Black Mirror",
+        "year": "",
+        "cover_image": "https://i.pinimg.com/736x/67/34/3e/67343e6d40c6ebbfa8fc2c54df771db4.jpg",
+        "directory_path": "D:\\Downloads\\@Sonarr\\Black Mirror",
+        "episodes": [
+            {
+                "id": 4,
+                "title": "Black Mirror - S07E06 - USS Callister - Into Infinity WEBRip-1080p",
+                "watched": false
+            },
+            {
+                "id": 3,
+                "title": "Black Mirror - S07E05 - Eulogy WEBRip-1080p",
+                "watched": false
+            },
+            {
+                "id": 2,
+                "title": "Black Mirror - S07E04 - Plaything WEBRip-1080p",
+                "watched": false
+            },
+            {
+                "id": 1,
+                "title": "Black Mirror - S07E03 - Hotel Reverie WEBRip-1080p",
                 "watched": false
             }
         ]
