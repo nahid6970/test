@@ -1,0 +1,20 @@
+[
+    {
+        "id": 1,
+        "title": "Stranger Things",
+        "year": 2016,
+        "cover_image": "https://upload.wikimedia.org/wikipedia/en/d/d3/Stranger_Things_season_4.jpg",
+        "episodes": [
+            {
+                "id": 1,
+                "title": "Chapter One: The Vanishing of Will Byers",
+                "watched": true
+            },
+            {
+                "id": 2,
+                "title": "Chapter Two: The Weirdo on Maple Street",
+                "watched": false
+            }
+        ]
+    }
+]

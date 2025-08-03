@@ -17,6 +17,7 @@ import io.ktor.http.HttpHeaders
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+
 class FileUploadWorker(appContext: Context, workerParams: WorkerParameters) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -44,8 +45,9 @@ class FileUploadWorker(appContext: Context, workerParams: WorkerParameters) : Co
                     setBody(MultiPartFormDataContent(
                         formData {
                             append("file", fileBytes, Headers.build {
+                                val mimeType = applicationContext.contentResolver.getType(fileUri) ?: "application/octet-stream"
                                 append(HttpHeaders.ContentDisposition, "filename=\"$fileName\"")
-                                append(HttpHeaders.ContentType, "application/octet-stream")
+                                append(HttpHeaders.ContentType, mimeType)
                             })
                         }
                     ))
@@ -68,7 +70,23 @@ class FileUploadWorker(appContext: Context, workerParams: WorkerParameters) : Co
         }
     }
 
+    
+
+    private fun getFileSize(uri: Uri): Long? {
+        var fileSize: Long? = null
+        applicationContext.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+                if (sizeIndex != -1) {
+                    fileSize = cursor.getLong(sizeIndex)
+                }
+            }
+        }
+        return fileSize
+    }
+
     private fun getFileName(uri: Uri): String? {
+
         var result: String? = null
         if (uri.scheme == "content") {
             val cursor = applicationContext.contentResolver.query(uri, null, null, null, null)

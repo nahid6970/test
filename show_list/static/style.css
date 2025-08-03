@@ -1,0 +1,72 @@
+
+body {
+    font-family: sans-serif;
+    margin: 20px;
+}
+
+.add-button {
+    display: inline-block;
+    margin-bottom: 20px;
+    padding: 10px 15px;
+    background-color: #4CAF50;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+}
+
+.show-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.show-card {
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.show-card a {
+    text-decoration: none;
+    color: black;
+}
+
+.show-card img {
+    width: 100%;
+    height: auto;
+}
+
+.show-card h3, .show-card p {
+    padding: 0 10px 10px;
+}
+
+.show-details-container {
+    display: flex;
+}
+
+.show-cover {
+    flex: 1;
+    margin-right: 20px;
+}
+
+.show-cover img {
+    width: 100%;
+}
+
+.episode-list {
+    flex: 2;
+}
+
+.episode-list ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.episode-list li {
+    margin-bottom: 10px;
+}
+
+.episode-list a {
+    text-decoration: none;
+    color: black;
+}
