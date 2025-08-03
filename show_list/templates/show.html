@@ -21,10 +21,8 @@
             <ul>
                 {% for episode in show.episodes %}
                     <li>
-                        <a href="{{ url_for('toggle_watched', show_id=show.id, episode_id=episode.id) }}">
-                            <input type="checkbox" {% if episode.watched %}checked{% endif %}>
-                            {{ episode.title }}
-                        </a>
+                        <input type="checkbox" {% if episode.watched %}checked{% endif %} onchange="window.location.href='{{ url_for('toggle_watched', show_id=show.id, episode_id=episode.id) }}'">
+                        {{ episode.title }}
                     </li>
                 {% endfor %}
             </ul>
