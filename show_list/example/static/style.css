@@ -1,0 +1,367 @@
+@import url("https://www.nerdfonts.com/assets/css/webfont.css");
+
+body {
+    font-family: Arial, sans-serif;
+    background: #1c1c1c;
+    color: white;
+    text-align: center;
+}
+
+.container {
+    margin: auto;
+    padding: 0px;
+}
+
+.game-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 20px;
+    justify-content: center;
+    /* Center items if they don’t fill the row */
+    align-items: flex-start;
+    /* Align items at the top */
+}
+
+.game {
+    font-family: JetBrainsMono NFP, sans-serif;
+    width: 325px;
+    background-color: #40435700;
+    /* width: 20%; */
+    border: 1px solid #bbb;
+    flex: 0 0 auto;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    /* Smooth transform and shadow */
+}
+
+.game:hover {
+    transform: scale(1.05);
+    /* Slight zoom effect */
+    border: 2px solid rgb(24, 255, 3);
+    /* Add a 2px solid white border on hover */
+    border-radius: 5px;
+    box-shadow: none;
+    /* Remove the shadow if you prefer no shadow at all */
+    background-color: #485461;
+}
+
+.game .img-wrapper {
+    margin-top: 3%;
+    width: 100%;
+    aspect-ratio: 16 / 16;
+    /* or fixed height like height: 200px; */
+    background-color: rgba(45, 116, 128, 0);
+    border-radius: 10px;
+    overflow: hidden;
+    padding-top: 1px;
+    padding-bottom: 1px;
+    padding-left: 0px;
+    padding-right: 0px;
+}
+
+.game .img-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    /* or 'cover' if you want to crop */
+    border-radius: 10px;
+    display: block;
+}
+
+.game h2 {
+    font-size: 1.5em;
+    color: #e0e0e0;
+    margin-top: 10px;
+    height: 4em;
+    /* align-content: center; */
+    align-content: end;
+}
+
+.game p {
+    font-size: 1.2em;
+    color: gold;
+}
+
+.form-container {
+    display: none;
+    background: #333;
+    padding: 10px;
+    border-radius: 10px;
+    margin: 20px auto;
+}
+
+input {
+    margin: 5px;
+    padding: 8px;
+    width: 90%;
+}
+
+.btn-group {
+    display: flex;
+    justify-content: center;
+    /* <-- centers horizontally */
+    gap: 8px;
+    /* Consistent gap between buttons */
+    margin-top: 0px;
+}
+
+.btn {
+    margin: 2px;
+    padding: 8px 10px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.btn-add {
+    background: #28a745;
+    color: white;
+}
+
+div.form-container {
+    max-width: 50%;
+}
+
+.btn-edit {
+    color: white;
+    text-decoration: none;
+    border: 2px solid;
+}
+
+.btn-edit:hover {
+    background: #007bff;
+    color: white;
+}
+
+.btn-delete {
+    color: rgb(255, 0, 0);
+    text-decoration: none;
+    border: 2px solid red;
+}
+
+.btn-delete:hover {
+    background: #ff0019;
+    color: rgb(255, 254, 254);
+}
+
+.btn-ytreview {
+    color: rgb(253, 38, 38);
+    text-decoration: none;
+    border: 2px solid white;
+}
+
+.btn-ytreview:hover {
+    background: #dc3545;
+    color: white;
+}
+
+.top-controls {
+    margin-bottom: 20px;
+}
+
+.top-controls button,
+.top-controls .sort-btn {
+    background: #28a745;
+    color: white;
+    padding: 10px 14px;
+    margin: 0 5px;
+    border: none;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.top-controls .sort-btn {
+    background: #ffc936;
+    color: rgb(0, 0, 0);
+    padding: 10px 14px;
+    margin: 0 5px;
+    border: none;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.top-controls .sort-btn:hover,
+.top-controls button:hover {
+    transform: scale(1.05);
+    background: #218838;
+}
+
+
+.progression-group {
+    margin-bottom: 15px;
+    display: flex;
+    /* Enable flexbox */
+    justify-content: center;
+    /* Center items horizontally */
+    align-items: center;
+    /* Center items vertically (optional, but can be useful) */
+}
+.progression-group label {
+    margin-right: 10px;
+}
+.progression-group input[type="radio"] {
+    display: none;
+}
+.progression-group label span {
+    padding: 8px 15px;
+    border: 1px solid #555;
+    border-radius: 5px;
+    cursor: pointer;
+    background-color: #444;
+    color: white;
+    display: inline-block;
+    min-width: 90px;
+    text-align: center;
+}
+.progression-group input[type="radio"]:checked+span {
+    background-color: #28a745;
+    /* Green for selected progression */
+    border-color: #28a745;
+}
+
+
+.rating-group {
+    margin-top: 20px;
+    margin-bottom: 0px;
+    display: flex;
+    /* Enable flexbox */
+    justify-content: center;
+    /* Center items horizontally */
+    align-items: center;
+    /* Center items vertically (optional) */
+}
+.rating-group label {
+    margin-right: 10px;
+}
+.rating-group input[type="radio"] {
+    display: none;
+}
+.rating-group label span {
+    padding: 8px 15px;
+    border: 1px solid #555;
+    border-radius: 15px;
+    cursor: pointer;
+    background-color: #444;
+    color: white;
+    display: inline-block;
+    min-width: 30px;
+    /* Smaller width for rating numbers */
+    text-align: center;
+}
+.rating-group input[type="radio"]:checked+span {
+    background-color: gold;
+    /* Gold for selected rating */
+    border-color: gold;
+    color: black;
+    /* Ensure text is readable on gold */
+}
+
+
+.collection-filter {
+    margin-top: 10px;
+}
+.collection-filter select {
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #555;
+    background-color: #333;
+    color: white;
+}
+
+
+.collection-info-container {
+    margin-bottom: 5px;
+    text-align: center;
+    /* Center the toggle text */
+}
+.collection-toggle {
+    color: lightblue;
+    cursor: pointer;
+    font-size: 0.8em;
+    display: inline-block;
+    /* Allows text-align to work */
+}
+.collection-toggle::before {
+    content: "▼ ";
+    display: inline-block;
+    margin-right: 5px;
+    transition: transform 0.2s ease-in-out;
+}
+.collection-toggle.collapsed::before {
+    transform: rotate(-90deg);
+}
+.collection-text {
+    color: lightblue;
+    font-size: 0.8em;
+    display: none;
+    margin-left: 0;
+    /* Remove indentation */
+    text-align: center;
+    /* Center the collection name */
+    text-decoration: underline;
+}
+.other-collection-games {
+    font-size: 0.75em;
+    color: #aaa;
+    margin-left: 0;
+    /* Remove indentation */
+    text-align: center;
+    /* Center the "Loading..." text and the list */
+}
+.other-collection-games ul {
+    list-style-type: none;
+    padding: 0;
+    text-align: left;
+    /* Align list items to the left within the centered ul */
+    display: inline-block;
+    /* Make the ul take only necessary width */
+}
+.other-collection-games li {
+    list-style-type: "";
+    margin-bottom: 3px;
+    text-align: left;
+}
+
+
+
+
+.pagination {
+    margin-top: 20px;
+    text-align: center;
+    padding: 10px 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    /* Space between elements */
+}
+.pagination a.btn {
+    display: inline-block;
+    padding: 8px 15px;
+    text-decoration: none;
+    color: #fff;
+    background-color: #007bff;
+    /* Bootstrap primary color */
+    border: 1px solid #007bff;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+.pagination a.btn:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+.pagination a.btn:disabled {
+    background-color: #6c757d;
+    /* Bootstrap secondary color */
+    border-color: #6c757d;
+    cursor: not-allowed;
+}
+.pagination span {
+    font-size: 1rem;
+    color: #495057;
+    /* Bootstrap gray color */
+}

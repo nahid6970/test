@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <title>GameARR</title>
+</head>
+
+
+<body>
+    <div class="container">
+        <!-- <a href="/" style="text-decoration: none; color: white;">
+            <h1>GameARR</h1>
+        </a> -->
+        <div class="top-controls">
+            <a href="/?sort_by=name&order={{ next_order }}{% if query %}&query={{ query }}{% endif %}{% if current_collection_filter %}&collection={{ current_collection_filter }}{% endif %}"
+                class="sort-btn"><i class="nf nf-fa-sort_alpha_asc"></i></a>
+            <a href="/?sort_by=year&order={{ next_order }}{% if query %}&query={{ query }}{% endif %}{% if current_collection_filter %}&collection={{ current_collection_filter }}{% endif %}"
+                class="sort-btn"><i class="nf nf-md-sort_calendar_ascending"></i></a>
+            <a href="/?sort_by=rating&order={{ next_order }}{% if query %}&query={{ query }}{% endif %}{% if current_collection_filter %}&collection={{ current_collection_filter }}{% endif %}"
+                class="sort-btn"><i class="nf nf-fa-star"></i></a>
+            <a href="/?sort_by=added&order={{ next_order }}{% if query %}&query={{ query }}{% endif %}{% if current_collection_filter %}&collection={{ current_collection_filter }}{% endif %}"
+                class="sort-btn"><i class="nf nf-fa-sort_numeric_asc"></i></a>
+
+            <form action="/search" method="get" style="display: inline; ">
+                <input type="text" name="query" placeholder="Search Games" style="text-align: center; width: 25%;"
+                    value="{{ query if query }}">
+                <button type="submit" class="btn">Search</button><br>
+            </form>
+        </div>
+        <div class="top-controls"
+            style="background-color: #f8f9fa00; padding: 10px; border-bottom: 1px solid #dddddd00; position: fixed; left: 0; top: 50%; width: auto; z-index: 100; transform: translateY(-50%); display: flex; flex-direction: column; align-items: stretch;">
+            <button onclick="location.href='/'" style="text-decoration: none; color: #000000; background: #4dfa47;"><i
+                    class="nf nf-fa-home"></i></button>
+            <button onclick="toggleForm()" style="color: #1c1c1c; background-color: #ffffff;"><i
+                    class="nf nf-cod-add"></i></button>
+            <button disabled style="background-color: #007bff;">{{ total_games }}</button>
+        </div>
+
+        <div class="collection-filter">
+            <select onchange="filterByCollection(this.value)">
+                <option value="">All Collections</option>
+                {% for collection in collections %}
+                <option value="{{ collection }}" {% if collection==current_collection_filter %}selected{% endif %}>{{
+                    collection
+                    }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="pagination" style="margin-top: 20px; text-align: center;">
+        {% if page > 1 %}
+        <a href="/?sort_by={{ sort_by }}&order={{ order }}{% if query %}&query={{ query }}{% endif %}{% if current_collection_filter %}&collection={{ current_collection_filter }}{% endif %}&page={{ page - 1 }}"
+            class="btn"><i class="nf nf-md-skip_previous"></i></a>
+        {% endif %}
+
+        <span>Page {{ page }} of {{ total_pages }}</span>
+
+        {% if page < total_pages %} <a
+            href="/?sort_by={{ sort_by }}&order={{ order }}{% if query %}&query={{ query }}{% endif %}{% if current_collection_filter %}&collection={{ current_collection_filter }}{% endif %}&page={{ page + 1 }}"
+            class="btn"><i class="nf nf-md-skip_next"></i></a>
+            {% endif %}
+    </div>
+
+    <div class="form-container" id="gameForm">
+        <form
+            action="/add?sort_by={{ sort_by }}&order={{ order }}{% if current_collection_filter %}&collection={{ current_collection_filter }}{% endif %}"
+            method="post"
+            style="margin-top: 1%; position: fixed; top: 0; left: 50%; transform: translateX(-50%); background-color: #333333; padding: 20px; border: 1px solid #ddd; z-index: 101; width: 80%; max-width: 600px; box-sizing: border-box;">
+
+            <div style="display: flex; align-items: center; margin-bottom: -15px; justify-content: center;">
+                <input type="text" id="gameName" name="name" placeholder="Game Name" required
+                    style="flex-grow: 1; max-width: 65%; text-align: center; font-size: 1.25rem; font-family:JetBrainsMono NFP, sans-serif;">
+                <button type="button" class="btn" onclick="googleSearch()"><i
+                        class="nf nf-dev-google"></i></button><!-- Google Search button -->
+                <button type="button" class="btn" onclick="googleSearchWithYear()"><i
+                        class="nf nf-cod-calendar"></i></button><!-- New button -->
+            </div><br>
+
+            <input type="text" name="image" placeholder="Image URL" style="background-color: #f7fa4f; "><br>
+            <input type="text" name="url" placeholder="Game URL" style="background-color: #f7fa4f;"><br>
+            <input type="text" name="year" placeholder="Year"
+                style="text-align: center; max-width: 20%; font-size: 1.25rem; font-family:JetBrainsMono NFP, sans-serif;"><br>
+            <div class="rating-group">
+                <label>
+                    <input type="radio" name="rating" value="1"> <span>1</span>
+                </label>
+                <label>
+                    <input type="radio" name="rating" value="2"> <span>2</span>
+                </label>
+                <label>
+                    <input type="radio" name="rating" value="3"> <span>3</span>
+                </label>
+                <label>
+                    <input type="radio" name="rating" value="4"> <span>4</span>
+                </label>
+                <label>
+                    <input type="radio" name="rating" value="5"> <span>5</span>
+                </label>
+            </div><br>
+            <div class="progression-group">
+                <label>
+                    <input type="radio" name="progression" value="Unplayed🆕" checked> <span>Unplayed🆕</span>
+                </label>
+                <label>
+                    <input type="radio" name="progression" value="Unfinished🔄️"> <span>Unfinished🔄️</span>
+                </label>
+                <label>
+                    <input type="radio" name="progression" value="Complete✅"> <span>Complete✅</span>
+                </label>
+            </div><br>
+            <input type="text" name="collection" placeholder="Collection (Optional)"><br>
+            <button type="submit" class="btn btn-add">Save</button>
+        </form>
+    </div>
+
+    <div class="game-list">
+        {% for game in games %}
+        <div class="game">
+            <h2 style="margin-bottom: -20px">{{ game[1] }}</h2>
+            <p style="color: #bbb; font-style: italic; margin-bottom: -20px ">{{ game[2] }}</p>
+
+            <!-- Progress -->
+            <p style="margin-bottom: -20px ">
+                {% if game[5] == 'Unplayed🆕' %}
+                <span style="color: red;">{{ game[5] }}</span>
+                {% elif game[5] == 'Unfinished🔄️' %}
+                <span style="color: orange;">{{ game[5] }}</span>
+                {% elif game[5] == 'Complete✅' %}
+                <span style="color: rgb(8, 247, 8);">{{ game[5] }}</span>
+                {% else %}
+                <span>{{ game[5] }}</span>
+                {% endif %}
+            </p>
+
+            <p>{% if game[4] %} {{ game[4] }}/5 ⭐ {% else %} ~/5 ⭐ {% endif %}</p>
+
+            <div class="btn-group">
+                <a href="/edit/{{ game[0] }}?sort_by={{ sort_by }}&order={{ order }}{% if current_collection_filter %}&collection={{ current_collection_filter }}{% endif %}{% if query %}&query={{ query }}{% endif %}"
+                    class="btn btn-edit">
+                    <i class="nf nf-fa-edit"></i></a>
+
+                <a href="/delete/{{ game[0] }}?sort_by={{ sort_by }}&order={{ order }}{% if current_collection_filter %}&collection={{ current_collection_filter }}{% endif %}"
+                    class="btn btn-delete" onclick="return confirm('Are you sure you want to delete this game?');">
+                    <i class="nf nf-md-delete"></i>
+                </a>
+
+                <a href="https://www.youtube.com/results?search_query={{ game[1]|urlencode }}+review"
+                    class="btn btn-ytreview" target="_blank">
+                    <i class="nf nf-fa-youtube"></i>
+                </a>
+            </div>
+
+            <!-- <div class="img-wrapper">
+                <a href="{{ game[6] if game[6] else '#' }}" target="_blank"> <img
+                        src="{{ url_for('static', filename='images/' + game[3]) }}" alt="{{ game[1] }}"> </a>
+            </div> -->
+
+            <div class="img-wrapper">
+                <a href="{{ game[6] if game[6] else '#' }}" target="_blank">
+                    <img src="{{ game[3] }}" alt="{{ game[1] }}">
+                </a>
+            </div>
+
+            <div class="collection-info-container">
+                {% if game[7] %}
+                <p class="collection-toggle collapsed"
+                    onclick="toggleCollection(this, 'collection-{{ game[0] }}', '{{ game[0] }}', this.dataset.collectionName)"
+                    data-collection-name="{{ game[7] }}">
+                    Collection
+                </p>
+                <div id="collection-{{ game[0] }}" class="collection-text">
+                    {{ game[7] }}
+                    <div id="other-games-{{ game[0] }}" class="other-collection-games" style="display: none;">
+                        Loading other games...
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+        {% endfor %}
+    </div>
+    </div>
+
+    <script src="static/script.js"></script>
+</body>
+</html>

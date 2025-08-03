@@ -1,157 +1,104 @@
 
 body {
-    font-family: sans-serif;
-    margin: 20px;
-    background-color: #121212;
-    color: #e0e0e0;
-}
-
-.add-button {
-    display: inline-block;
-    margin-bottom: 20px;
-    padding: 10px 15px;
-    background-color: #1db954;
+    font-family: Arial, sans-serif;
+    background: #1c1c1c;
     color: white;
-    text-decoration: none;
-    border-radius: 5px;
-}
-
-.show-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 20px;
-}
-
-.show-card {
-    background-color: #282828;
-    border: 1px solid #404040;
-    border-radius: 5px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-
-.show-card a {
-    text-decoration: none;
-    color: #e0e0e0;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.show-card img {
-    width: 100%;
-    height: 300px;
-    object-fit: cover;
-}
-
-.show-card h3, .show-card p {
-    padding: 0 10px 10px;
     text-align: center;
 }
 
-.show-actions, .episode-actions {
+.show-grid {
     display: flex;
-    justify-content: space-around;
-    padding: 10px;
-    background-color: #333;
-}
-
-.show-actions a, .episode-actions a {
-    text-decoration: none;
-    color: #fff;
-    background-color: #535353;
-    padding: 5px 10px;
-    border-radius: 3px;
-}
-
-.episode-actions a {
-    background-color: #757575;
-}
-
-.show-details-container {
-    display: flex;
-    align-items: center;
-}
-
-.show-cover {
-    flex: 1;
-    margin-right: 20px;
-}
-
-.show-cover img {
-    width: 100%;
-    border-radius: 5px;
-}
-
-.episode-list {
-    flex: 2;
-    background-color: #282828;
+    flex-wrap: wrap;
+    gap: 20px;
     padding: 20px;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.show-card {
+    font-family: JetBrainsMono NFP, sans-serif;
+    width: 325px;
+    background-color: #40435700;
+    border: 1px solid #bbb;
+    flex: 0 0 auto;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.show-card:hover {
+    transform: scale(1.05);
+    border: 2px solid rgb(24, 255, 3);
     border-radius: 5px;
-    max-height: 80vh;
-    overflow-y: auto;
+    box-shadow: none;
+    background-color: #485461;
 }
 
-.episode-list ul {
-    list-style-type: none;
-    padding: 0;
+.show-card .img-wrapper {
+    margin-top: 3%;
+    width: 100%;
+    aspect-ratio: 16 / 16;
+    background-color: rgba(45, 116, 128, 0);
+    border-radius: 10px;
+    overflow: hidden;
+    padding-top: 1px;
+    padding-bottom: 1px;
+    padding-left: 0px;
+    padding-right: 0px;
 }
 
-.episode-list li {
-    margin-bottom: 10px;
+.show-card .img-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 10px;
+    display: block;
+}
+
+.show-card h3 {
+    font-size: 1.5em;
+    color: #e0e0e0;
+    margin-top: 10px;
+    height: 4em;
+    align-content: end;
+}
+
+.show-card p {
+    font-size: 1.2em;
+    color: gold;
+}
+
+.btn-group {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px;
-    background-color: #333;
-    border-radius: 3px;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 0px;
 }
 
-.episode-title {
-    flex-grow: 1;
-}
-
-.episode-controls a {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    margin-left: 10px;
-}
-
-.edit-dot {
-    background-color: #3498db;
-}
-
-.delete-dot {
-    background-color: #e74c3c;
-}
-
-.episode-list a {
-    text-decoration: none;
-    color: #e0e0e0;
-}
-
-input[type="text"], input[type="number"], input[type="url"] {
-    background-color: #333;
-    color: #e0e0e0;
-    border: 1px solid #555;
-    padding: 10px;
-    border-radius: 3px;
-    width: calc(100% - 22px);
-    margin-bottom: 10px;
-}
-
-button[type="submit"] {
-    background-color: #1db954;
-    color: white;
+.btn {
+    margin: 2px;
+    padding: 8px 10px;
     border: none;
-    padding: 10px 15px;
-    border-radius: 5px;
     cursor: pointer;
+    border-radius: 5px;
 }
 
-h1, h2 {
-    color: #1db954;
+.btn-edit {
+    color: white;
+    text-decoration: none;
+    border: 2px solid;
+}
+
+.btn-edit:hover {
+    background: #007bff;
+    color: white;
+}
+
+.btn-delete {
+    color: rgb(255, 0, 0);
+    text-decoration: none;
+    border: 2px solid red;
+}
+
+.btn-delete:hover {
+    background: #ff0019;
+    color: rgb(255, 254, 254);
 }
