@@ -62,7 +62,7 @@ def add_episode(show_id):
             'title': request.form['title'],
             'watched': False
         }
-        show['episodes'].append(new_episode)
+        show['episodes'].insert(0, new_episode)
         save_data(shows)
         return redirect(url_for('show', show_id=show_id))
     return 'Show not found', 404
