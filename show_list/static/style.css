@@ -2,13 +2,15 @@
 body {
     font-family: sans-serif;
     margin: 20px;
+    background-color: #121212;
+    color: #e0e0e0;
 }
 
 .add-button {
     display: inline-block;
     margin-bottom: 20px;
     padding: 10px 15px;
-    background-color: #4CAF50;
+    background-color: #1db954;
     color: white;
     text-decoration: none;
     border-radius: 5px;
@@ -21,14 +23,15 @@ body {
 }
 
 .show-card {
-    border: 1px solid #ccc;
+    background-color: #282828;
+    border: 1px solid #404040;
     border-radius: 5px;
     overflow: hidden;
 }
 
 .show-card a {
     text-decoration: none;
-    color: black;
+    color: #e0e0e0;
 }
 
 .show-card img {
@@ -44,18 +47,19 @@ body {
     display: flex;
     justify-content: space-around;
     padding: 10px;
+    background-color: #333;
 }
 
 .show-actions a, .episode-actions a {
     text-decoration: none;
     color: #fff;
-    background-color: #007bff;
+    background-color: #535353;
     padding: 5px 10px;
     border-radius: 3px;
 }
 
 .episode-actions a {
-    background-color: #6c757d;
+    background-color: #757575;
 }
 
 .show-details-container {
@@ -70,10 +74,14 @@ body {
 
 .show-cover img {
     width: 100%;
+    border-radius: 5px;
 }
 
 .episode-list {
     flex: 2;
+    background-color: #282828;
+    padding: 20px;
+    border-radius: 5px;
     max-height: 80vh;
     overflow-y: auto;
 }
@@ -88,6 +96,9 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 10px;
+    background-color: #333;
+    border-radius: 3px;
 }
 
 .episode-title {
@@ -103,14 +114,37 @@ body {
 }
 
 .edit-dot {
-    background-color: blue;
+    background-color: #3498db;
 }
 
 .delete-dot {
-    background-color: red;
+    background-color: #e74c3c;
 }
 
 .episode-list a {
     text-decoration: none;
-    color: black;
+    color: #e0e0e0;
+}
+
+input[type="text"], input[type="number"], input[type="url"] {
+    background-color: #333;
+    color: #e0e0e0;
+    border: 1px solid #555;
+    padding: 10px;
+    border-radius: 3px;
+    width: calc(100% - 22px);
+    margin-bottom: 10px;
+}
+
+button[type="submit"] {
+    background-color: #1db954;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+h1, h2 {
+    color: #1db954;
 }
