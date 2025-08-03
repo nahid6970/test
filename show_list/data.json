@@ -2,8 +2,8 @@
     {
         "id": 1,
         "title": "Stranger Things",
-        "year": 2016,
-        "cover_image": "https://upload.wikimedia.org/wikipedia/en/d/d3/Stranger_Things_season_4.jpg",
+        "year": "2016",
+        "cover_image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTYoRhQ7BAmvKsT9sG1ZkFXXq-Bsf9LEXSB5Q&s",
         "episodes": [
             {
                 "id": 1,
