@@ -20,13 +20,15 @@
             </form>
             <ul>
                 {% for episode in show.episodes %}
-                    <li>
-                        <input type="checkbox" {% if episode.watched %}checked{% endif %} onchange="window.location.href='{{ url_for('toggle_watched', show_id=show.id, episode_id=episode.id) }}'">
-                        {{ episode.title }}
-                        <div class="episode-actions">
-                            <a href="{{ url_for('edit_episode', show_id=show.id, episode_id=episode.id) }}">Edit</a>
-                            <a href="{{ url_for('delete_episode', show_id=show.id, episode_id=episode.id) }}" onclick="return confirm('Are you sure you want to delete this episode?')">Delete</a>
-                        </div>
+                    <li class="episode-item">
+                        <span class="episode-title">
+                            <input type="checkbox" {% if episode.watched %}checked{% endif %} onchange="window.location.href='{{ url_for('toggle_watched', show_id=show.id, episode_id=episode.id) }}'">
+                            {{ episode.title }}
+                        </span>
+                        <span class="episode-controls">
+                            <a href="{{ url_for('edit_episode', show_id=show.id, episode_id=episode.id) }}" class="edit-dot"></a>
+                            <a href="{{ url_for('delete_episode', show_id=show.id, episode_id=episode.id) }}" class="delete-dot" onclick="return confirm('Are you sure you want to delete this episode?')"></a>
+                        </span>
                     </li>
                 {% endfor %}
             </ul>

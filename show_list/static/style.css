@@ -82,6 +82,29 @@ body {
 
 .episode-list li {
     margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.episode-title {
+    flex-grow: 1;
+}
+
+.episode-controls a {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-left: 10px;
+}
+
+.edit-dot {
+    background-color: blue;
+}
+
+.delete-dot {
+    background-color: red;
 }
 
 .episode-list a {
