@@ -41,6 +41,7 @@ body {
 
 .show-card h3, .show-card p {
     padding: 0 10px 10px;
+    text-align: center;
 }
 
 .show-actions, .episode-actions {
