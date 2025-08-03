@@ -1,3 +1,4 @@
+
 import json
 from flask import Flask, render_template, request, redirect, url_for
 
@@ -52,6 +53,27 @@ def add_show():
         return redirect(url_for('index'))
     return render_template('add_show.html')
 
+@app.route('/edit_show/<int:show_id>', methods=['GET', 'POST'])
+def edit_show(show_id):
+    shows = load_data()
+    show = next((s for s in shows if s['id'] == show_id), None)
+    if not show:
+        return 'Show not found', 404
+    if request.method == 'POST':
+        show['title'] = request.form['title']
+        show['year'] = request.form['year']
+        show['cover_image'] = request.form['cover_image']
+        save_data(shows)
+        return redirect(url_for('index'))
+    return render_template('edit_show.html', show=show)
+
+@app.route('/delete_show/<int:show_id>')
+def delete_show(show_id):
+    shows = load_data()
+    shows = [s for s in shows if s['id'] != show_id]
+    save_data(shows)
+    return redirect(url_for('index'))
+
 @app.route('/add_episode/<int:show_id>', methods=['POST'])
 def add_episode(show_id):
     shows = load_data()
@@ -63,6 +85,31 @@ def add_episode(show_id):
             'watched': False
         }
         show['episodes'].insert(0, new_episode)
+        save_data(shows)
+        return redirect(url_for('show', show_id=show_id))
+    return 'Show not found', 404
+
+@app.route('/edit_episode/<int:show_id>/<int:episode_id>', methods=['GET', 'POST'])
+def edit_episode(show_id, episode_id):
+    shows = load_data()
+    show = next((s for s in shows if s['id'] == show_id), None)
+    if not show:
+        return 'Show not found', 404
+    episode = next((e for e in show['episodes'] if e['id'] == episode_id), None)
+    if not episode:
+        return 'Episode not found', 404
+    if request.method == 'POST':
+        episode['title'] = request.form['title']
+        save_data(shows)
+        return redirect(url_for('show', show_id=show_id))
+    return render_template('edit_episode.html', show_id=show_id, episode=episode)
+
+@app.route('/delete_episode/<int:show_id>/<int:episode_id>')
+def delete_episode(show_id, episode_id):
+    shows = load_data()
+    show = next((s for s in shows if s['id'] == show_id), None)
+    if show:
+        show['episodes'] = [e for e in show['episodes'] if e['id'] != episode_id]
         save_data(shows)
         return redirect(url_for('show', show_id=show_id))
     return 'Show not found', 404
@@ -80,4 +127,4 @@ def toggle_watched(show_id, episode_id):
     return 'Episode not found', 404
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5011)

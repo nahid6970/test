@@ -18,16 +18,9 @@
         ]
     },
     {
-        "id": 2,
+        "id": 3,
         "title": "One Piece",
         "year": "1999",
-        "cover_image": "data:image/webp;base64,UklGRrgNAABXRUJQVlA4IKwNAADQPwCdASq/AG8AP1lc1msyI7IyGVJAKwloAMHKYt0+yphFw7ekfyXf3+i9eteD+S3RXZ7+88ZlAW9L4Qf0mu5yBetV4HP4DffLluXszujaF5mRo6/Jtsxt3JYsj9NDojQCAyH1kQKvVzu+ODnilG8zmhb2k8yFqrf4IRtksSerMYRudgYuYztz2ttf9UdEQMYJ3xDGa9tEiiQNvab1E6GmGKG7FGwxtH8IPgIrQxvcqFinwEvHB/OtPYNIvDCy/SoBQ9bEkPPIa1tyvrA2vNg/ey3H+pKPCgz1SQOkYlS12C421hmG0mOB64Mo/NvZWrVE8S2rR4nNReDNiYz8uTIS86aBE1XXgcEb3BI/wPnHNX5cFAYAyvSrG74WNu4RR2rNNpowYEbDGg8qzq67irMclUzFzdwLGOZugjuWBnMjYyOZEPnLSWRWgA2s1L0TBdfridoclQFdJp+AFe7tFgAYpv22orN3qzM4iZic+vOZJec7JcuEoMpAO5I1t6xbUjKmHFoXjBwsWcMtil09M///mCvgdJwsmc97lVotrHPty99jcSrxoNHQXTedQbj2LCXMrfGPTdx3lme0mWVaXI/a3+Zf80c9nl7aA9MLmL3sqUCYmR7iFOVK8/tp1Dfhdz4JWldNikheECH64Na4LAjmguLLVxbVvDJgqSgarrU6OGmLgrWaqgAA/se4oSZYgF78aIQc3KTZIbJFHgiOSdIQi084+mhFoIQEvT+AGkd0EFOYO53c7yUBy/RutHpfmb5P5GY+Pj9NCUlhcKevyVxdzL7L0hdaQJj73d7zqWjegxBcRUCMklb1zPcrcuOavEODOpLEcFVz/lb1lUeuuC6BvXx/alEIryp0ghFFrUqH7Tum7taH+XE659YX/uF6FfY74edWKEB6YMt7zRehGDs3/ELCdqQwTVGiEQZPtnihaM4ZlXrkl65ZJyD8t94uBW80wpyFNHUKXEfVe",
-        "episodes": []
-    },
-    {
-        "id": 3,
-        "title": "155",
-        "year": "2014",
         "cover_image": "https://m.media-amazon.com/images/M/MV5BMTNjNGU4NTUtYmVjMy00YjRiLTkxMWUtNzZkMDNiYjZhNmViXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg",
         "episodes": [
             {
