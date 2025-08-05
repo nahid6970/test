@@ -483,9 +483,11 @@ private suspend fun uploadFilesWithProgress(
                 }
             }
             
+            val safeFilename = createSafeFilename(file.fileName)
             val multipartBody = MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
-                .addFormDataPart("file", file.fileName, requestBody)
+                .addFormDataPart("file", safeFilename, requestBody)
+                .addFormDataPart("original_filename", file.fileName)
                 .build()
             
             val request = Request.Builder()
@@ -580,4 +582,14 @@ private fun parseSpeed(speedString: String): Double {
         "GB/s" -> value * 1024 * 1024 * 1024
         else -> 0.0
     }
+}
+
+private fun createSafeFilename(originalFilename: String): String {
+    // Preserve spaces and most special characters, only remove truly dangerous ones
+    return originalFilename
+        .replace(Regex("[<>:\"|?*]"), "_") // Remove Windows forbidden characters
+        .replace(Regex("[\u0000-\u001f]"), "_") // Remove control characters
+        .replace("..", "_") // Prevent directory traversal
+        .trim()
+        .takeIf { it.isNotEmpty() } ?: "unnamed_file"
 }

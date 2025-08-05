@@ -1,4 +1,5 @@
 import os
+import re
 from flask import Flask, request, send_from_directory, redirect, url_for, flash, render_template_string
 from werkzeug.utils import secure_filename
 
@@ -13,6 +14,22 @@ if not os.path.exists(SHARE_FOLDER):
     os.makedirs(SHARE_FOLDER)
 
 app.config['SHARE_FOLDER'] = SHARE_FOLDER
+
+def create_safe_filename(filename):
+    """
+    Create a safe filename that preserves spaces and most special characters
+    while removing only truly dangerous characters
+    """
+    # Remove dangerous characters but preserve spaces and common symbols
+    safe_filename = re.sub(r'[<>:"|?*\x00-\x1f]', '_', filename)
+    # Prevent directory traversal
+    safe_filename = safe_filename.replace('..', '_')
+    # Remove leading/trailing whitespace and dots
+    safe_filename = safe_filename.strip('. ')
+    # Ensure filename is not empty
+    if not safe_filename:
+        safe_filename = 'unnamed_file'
+    return safe_filename
 
 # HTML template within the Python file (instead of an external index.html)
 html_template = '''
@@ -439,15 +456,28 @@ def index():
                 flash("No file selected for upload.", "error")
                 return '', 400 
 
-            filename = secure_filename(file.filename)
+            # Check if original filename is provided (from Android app)
+            original_filename = request.form.get('original_filename')
+            if original_filename:
+                # Use original filename but make it safe for filesystem
+                filename = create_safe_filename(original_filename)
+            else:
+                # Fallback to secure_filename for web uploads
+                filename = secure_filename(file.filename)
+            
             file_path = os.path.join(app.config['SHARE_FOLDER'], filename)
 
             try:
-                if not os.path.exists(file_path):
-                    file.save(file_path)
-                    flash(f"File '{filename}' uploaded successfully.", "success")
-                else:
-                    flash(f"File '{filename}' already exists on the server.", "warning")
+                # Handle duplicate filenames by adding a number
+                counter = 1
+                base_name, extension = os.path.splitext(filename)
+                while os.path.exists(file_path):
+                    filename = f"{base_name} ({counter}){extension}"
+                    file_path = os.path.join(app.config['SHARE_FOLDER'], filename)
+                    counter += 1
+                
+                file.save(file_path)
+                flash(f"File '{filename}' uploaded successfully.", "success")
                 return '', 200  # Success
             except Exception as e:
                 flash(f"Server error saving '{filename}': {e}", "error")
