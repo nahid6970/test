@@ -1,14 +1,19 @@
 package com.example.myapplication
 
+import android.content.Context
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -33,79 +38,195 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = "File Share to PC",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        Text(
-            text = "Share files from any app to your PC!",
-            fontSize = 16.sp,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        
-        Spacer(modifier = Modifier.height(32.dp))
-        
-        Card(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "How to use:",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-                
-                Text("1. Make sure your PC is running the Python server (upload_files.py)")
-                Text("2. Ensure both devices are on the same network")
-                Text("3. Share any file from any app and select 'Share to PC'")
-                Text("4. Enter your PC's IP address and upload!")
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
+    val context = LocalContext.current
+    val sharedPrefs = context.getSharedPreferences("file_share_prefs", Context.MODE_PRIVATE)
+    
+    var serverUrl by remember { 
+        mutableStateOf(sharedPrefs.getString("server_url", "http://192.168.1.100:5002") ?: "http://192.168.1.100:5002") 
+    }
+    var showSettings by remember { mutableStateOf(false) }
+    
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("File Share to PC") },
+                actions = {
+                    IconButton(onClick = { showSettings = true }) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    }
+                }
             )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            Text(
+                text = "File Share to PC",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Text(
+                text = "Share files from any app to your PC!",
+                fontSize = 16.sp,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                )
             ) {
-                Text(
-                    text = "Server Setup:",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Current Server:",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                    
+                    Text(
+                        text = serverUrl,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    
+                    Text(
+                        text = "Tap the settings icon to change the server URL",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "How to use:",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                    
+                    Text("1. Make sure your PC is running the Python server (upload_files.py)")
+                    Text("2. Ensure both devices are on the same network")
+                    Text("3. Set the correct server URL in settings")
+                    Text("4. Share any file from any app and select 'Share to PC'")
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
-                
-                Text("Run this command on your PC:")
-                Text(
-                    text = "python upload_files.py",
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text("Default server runs on port 5002")
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Server Setup:",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                    
+                    Text("Run this command on your PC:")
+                    Text(
+                        text = "python upload_files.py",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text("Default server runs on port 5002")
+                }
             }
         }
     }
+    
+    if (showSettings) {
+        SettingsDialog(
+            currentUrl = serverUrl,
+            onUrlChange = { newUrl ->
+                serverUrl = newUrl
+                sharedPrefs.edit().putString("server_url", newUrl).apply()
+                Toast.makeText(context, "Server URL saved", Toast.LENGTH_SHORT).show()
+            },
+            onDismiss = { showSettings = false }
+        )
+    }
+}
+
+@Composable
+fun SettingsDialog(
+    currentUrl: String,
+    onUrlChange: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var tempUrl by remember { mutableStateOf(currentUrl) }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Server Settings") },
+        text = {
+            Column {
+                Text("Enter your PC's IP address and port:")
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = tempUrl,
+                    onValueChange = { tempUrl = it },
+                    label = { Text("Server URL") },
+                    placeholder = { Text("http://192.168.1.100:5002") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Example: http://192.168.1.100:5002",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (tempUrl.isNotBlank()) {
+                        onUrlChange(tempUrl)
+                        onDismiss()
+                    }
+                }
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Preview(showBackground = true)
