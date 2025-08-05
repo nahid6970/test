@@ -1,0 +1,52 @@
+# Binaries
+*.jar
+*.class
+*.exe
+*.dll
+*.so
+*.o
+*.a
+*.out
+*.pyc
+
+# Archives
+*.zip
+*.tar.gz
+*.tar
+*.rar
+
+# Images and media
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+*.svg
+*.mp3
+*.mp4
+*.avi
+*.mov
+
+# Other
+.DS_Store
+*.swo
+*.swp
+*.pdf
+
+# Build artifacts
+build/
+.gradle/
+.idea/
+caches/
+
+# Local properties
+local.properties
+
+# Other generated files
+*.lock
+*.bin
+*.probe
+CACHEDIR.TAG
+.flutter-plugins-dependencies
+devtools_options.yaml
