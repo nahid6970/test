@@ -1,14 +1,17 @@
 package com.example.myapplication
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,13 +25,29 @@ import androidx.compose.ui.unit.sp
 import com.example.myapplication.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
+    
+    private val folderPickerLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        uri?.let {
+            // Start FolderUploadActivity with the selected folder
+            val intent = Intent(this, FolderUploadActivity::class.java).apply {
+                putExtra("folder_uri", it.toString())
+            }
+            startActivity(intent)
+        }
+    }
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    MainScreen(modifier = Modifier.padding(innerPadding))
+                    MainScreen(
+                        modifier = Modifier.padding(innerPadding),
+                        onPickFolder = { folderPickerLauncher.launch(null) }
+                    )
                 }
             }
         }
@@ -37,7 +56,10 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(modifier: Modifier = Modifier) {
+fun MainScreen(
+    modifier: Modifier = Modifier,
+    onPickFolder: () -> Unit = {}
+) {
     val context = LocalContext.current
     val sharedPrefs = context.getSharedPreferences("file_share_prefs", Context.MODE_PRIVATE)
     
@@ -116,6 +138,25 @@ fun MainScreen(modifier: Modifier = Modifier) {
             
             Spacer(modifier = Modifier.height(24.dp))
             
+            // Folder Upload Button
+            Button(
+                onClick = onPickFolder,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary
+                )
+            ) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Pick Folder",
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Upload Entire Folder")
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
             Card(
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -132,7 +173,9 @@ fun MainScreen(modifier: Modifier = Modifier) {
                     Text("1. Make sure your PC is running the Python server (upload_files.py)")
                     Text("2. Ensure both devices are on the same network")
                     Text("3. Set the correct server URL in settings")
-                    Text("4. Share any file from any app and select 'Share to PC'")
+                    Text("4. Share files from any app and select 'Share to PC'")
+                    Text("5. Or use 'Upload Entire Folder' button above for folders")
+                    Text("6. If uploads are slow, check WiFi signal and close other apps using network")
                 }
             }
             
@@ -161,6 +204,32 @@ fun MainScreen(modifier: Modifier = Modifier) {
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text("Default server runs on port 5002")
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Network Tips:",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                    
+                    Text("• Both devices must be on the same WiFi network")
+                    Text("• Close other apps using internet for better speed")
+                    Text("• Move closer to WiFi router if uploads are slow")
+                    Text("• Large files may take longer - be patient!")
+                    Text("• App will retry failed uploads automatically")
                 }
             }
         }

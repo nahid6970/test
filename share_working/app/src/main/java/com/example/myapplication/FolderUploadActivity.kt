@@ -1,16 +1,13 @@
 package com.example.myapplication
 
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -24,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.documentfile.provider.DocumentFile
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -41,187 +39,68 @@ import java.io.FileOutputStream
 import java.io.IOException
 import kotlin.math.roundToInt
 
-class ShareActivity : ComponentActivity() {
-    
-    private val client = OkHttpClient()
+class FolderUploadActivity : ComponentActivity() {
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        val sharedFiles = getSharedFiles()
+        val folderUriString = intent.getStringExtra("folder_uri")
+        if (folderUriString == null) {
+            Toast.makeText(this, "No folder selected", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+        
+        val folderUri = Uri.parse(folderUriString)
+        val files = getFilesFromFolder(folderUri)
         
         setContent {
             MyApplicationTheme {
-                ShareScreen(
-                    files = sharedFiles,
+                FolderUploadScreen(
+                    files = files,
                     onCancel = { finish() }
                 )
             }
         }
     }
     
-    private fun getSharedFiles(): List<SharedFile> {
-        val files = mutableListOf<SharedFile>()
-        
-        when (intent?.action) {
-            Intent.ACTION_SEND -> {
-                intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)?.let { uri ->
-                    if (isDirectory(uri)) {
-                        // If it's a directory, get all files recursively
-                        files.addAll(getFilesFromDirectory(uri))
-                    } else {
-                        val fileName = getFileName(uri)
-                        val fileSize = getFileSize(uri)
-                        files.add(SharedFile(uri, fileName, fileSize))
-                    }
-                }
-            }
-            Intent.ACTION_SEND_MULTIPLE -> {
-                intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)?.let { uris ->
-                    uris.forEach { uri ->
-                        if (isDirectory(uri)) {
-                            // If it's a directory, get all files recursively
-                            files.addAll(getFilesFromDirectory(uri))
-                        } else {
-                            val fileName = getFileName(uri)
-                            val fileSize = getFileSize(uri)
-                            files.add(SharedFile(uri, fileName, fileSize))
-                        }
-                    }
-                }
-            }
-        }
-        
-        return files
-    }
-    
-    private fun getFileName(uri: Uri): String {
-        var fileName = "unknown_file"
-        contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-            if (cursor.moveToFirst()) {
-                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                if (nameIndex != -1) {
-                    fileName = cursor.getString(nameIndex)
-                }
-            }
-        }
-        return fileName
-    }
-    
-    private fun getFileSize(uri: Uri): Long {
-        var fileSize = 0L
-        contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-            if (cursor.moveToFirst()) {
-                val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
-                if (sizeIndex != -1) {
-                    fileSize = cursor.getLong(sizeIndex)
-                }
-            }
-        }
-        return fileSize
-    }
-    
-    private fun isDirectory(uri: Uri): Boolean {
-        return try {
-            val documentFile = androidx.documentfile.provider.DocumentFile.fromSingleUri(this, uri)
-            documentFile?.isDirectory == true
-        } catch (e: Exception) {
-            false
-        }
-    }
-    
-    private fun getFilesFromDirectory(directoryUri: Uri, basePath: String = ""): List<SharedFile> {
+    private fun getFilesFromFolder(folderUri: Uri): List<SharedFile> {
         val files = mutableListOf<SharedFile>()
         
         try {
-            val documentFile = androidx.documentfile.provider.DocumentFile.fromSingleUri(this, directoryUri)
+            val documentFile = DocumentFile.fromTreeUri(this, folderUri)
             if (documentFile?.isDirectory == true) {
-                val directoryName = documentFile.name ?: "folder"
-                val currentPath = if (basePath.isEmpty()) directoryName else "$basePath/$directoryName"
-                
-                documentFile.listFiles().forEach { childFile ->
-                    if (childFile.isDirectory) {
-                        // Recursively get files from subdirectory
-                        files.addAll(getFilesFromDirectory(childFile.uri, currentPath))
-                    } else if (childFile.isFile) {
-                        val fileName = childFile.name ?: "unknown_file"
-                        val fileSize = childFile.length()
-                        val fullPath = "$currentPath/$fileName"
-                        
-                        files.add(SharedFile(
-                            uri = childFile.uri,
-                            fileName = fullPath,
-                            fileSize = fileSize
-                        ))
-                    }
-                }
+                val folderName = documentFile.name ?: "folder"
+                scanDirectory(documentFile, folderName, files)
             }
         } catch (e: Exception) {
-            // If directory scanning fails, treat as single file
-            val fileName = getFileName(directoryUri)
-            val fileSize = getFileSize(directoryUri)
-            files.add(SharedFile(directoryUri, fileName, fileSize))
+            Toast.makeText(this, "Error reading folder: ${e.message}", Toast.LENGTH_LONG).show()
         }
         
         return files
     }
     
-    // This function is no longer needed as we handle uploads directly in the Composable
-    
-    private suspend fun uploadFile(sharedFile: SharedFile, serverUrl: String) = withContext(Dispatchers.IO) {
-        val inputStream = contentResolver.openInputStream(sharedFile.uri)
-        val tempFile = File(cacheDir, sharedFile.fileName)
-        
-        inputStream?.use { input ->
-            FileOutputStream(tempFile).use { output ->
-                input.copyTo(output)
+    private fun scanDirectory(directory: DocumentFile, basePath: String, files: MutableList<SharedFile>) {
+        directory.listFiles().forEach { file ->
+            if (file.isDirectory) {
+                val subPath = "$basePath/${file.name}"
+                scanDirectory(file, subPath, files)
+            } else if (file.isFile) {
+                val fileName = file.name ?: "unknown_file"
+                val fullPath = "$basePath/$fileName"
+                files.add(SharedFile(
+                    uri = file.uri,
+                    fileName = fullPath,
+                    fileSize = file.length()
+                ))
             }
         }
-        
-        val requestBody = tempFile.asRequestBody("application/octet-stream".toMediaType())
-        val multipartBody = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("file", sharedFile.fileName, requestBody)
-            .build()
-        
-        val request = Request.Builder()
-            .url(serverUrl)
-            .post(multipartBody)
-            .build()
-        
-        client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                throw IOException("Upload failed: ${response.code}")
-            }
-        }
-        
-        tempFile.delete()
     }
-}
-
-data class SharedFile(
-    val uri: Uri,
-    val fileName: String,
-    val fileSize: Long = 0L
-)
-
-data class UploadProgress(
-    val fileIndex: Int = -1,
-    val fileName: String = "",
-    val progress: Float = 0f,
-    val uploadedBytes: Long = 0L,
-    val totalBytes: Long = 0L,
-    val uploadSpeed: String = "0 KB/s",
-    val status: UploadStatus = UploadStatus.PENDING
-)
-
-enum class UploadStatus {
-    PENDING, UPLOADING, COMPLETED, ERROR
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ShareScreen(
+fun FolderUploadScreen(
     files: List<SharedFile>,
     onCancel: () -> Unit
 ) {
@@ -237,11 +116,12 @@ fun ShareScreen(
     var totalUploadSpeed by remember { mutableStateOf("0 KB/s") }
     
     val scope = rememberCoroutineScope()
+    val totalSize = files.sumOf { it.fileSize }
     
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Share to PC") }
+                title = { Text("Upload Folder") }
             )
         }
     ) { paddingValues ->
@@ -252,24 +132,25 @@ fun ShareScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            val totalSize = files.sumOf { it.fileSize }
-            val hasDirectories = files.any { it.fileName.contains("/") }
-            
-            Text(
-                text = if (hasDirectories) 
-                    "Files to Upload (${files.size} files from folders)" 
-                else 
-                    "Files to Upload (${files.size})",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-            
-            if (hasDirectories) {
-                Text(
-                    text = "Total size: ${formatFileSize(totalSize)} • Directory structure will be preserved",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Folder Upload",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text("📁 ${files.size} files found")
+                    Text("📊 Total size: ${formatFileSize(totalSize)}")
+                    Text("🏗️ Directory structure will be preserved")
+                }
             }
             
             if (isUploading) {
@@ -277,7 +158,7 @@ fun ShareScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
                     )
                 ) {
                     Column(
@@ -309,11 +190,11 @@ fun ShareScreen(
             ) {
                 if (isUploading && uploadProgress.isNotEmpty()) {
                     itemsIndexed(uploadProgress) { index, progress ->
-                        FileProgressCard(progress = progress)
+                        FolderFileProgressCard(progress = progress)
                     }
                 } else {
                     itemsIndexed(files) { index, file ->
-                        FileInfoCard(file = file, index = index)
+                        FolderFileInfoCard(file = file)
                     }
                 }
             }
@@ -370,7 +251,7 @@ fun ShareScreen(
                                         return@launch
                                     }
                                     
-                                    Toast.makeText(context, "Server connected! Starting upload...", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Server connected! Starting folder upload...", Toast.LENGTH_SHORT).show()
                                     
                                     uploadFilesWithProgress(
                                         context = context,
@@ -395,9 +276,9 @@ fun ShareScreen(
                                     val errorFiles = uploadProgress.count { it.status == UploadStatus.ERROR }
                                     
                                     if (errorFiles == 0) {
-                                        Toast.makeText(context, "All $completedFiles files uploaded successfully!", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(context, "Folder uploaded successfully! $completedFiles files transferred.", Toast.LENGTH_LONG).show()
                                     } else {
-                                        Toast.makeText(context, "$completedFiles files uploaded, $errorFiles failed", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(context, "Folder upload completed: $completedFiles files uploaded, $errorFiles failed", Toast.LENGTH_LONG).show()
                                     }
                                     
                                     delay(2000)
@@ -420,7 +301,7 @@ fun ShareScreen(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("Upload")
+                        Text("Upload Folder")
                     }
                 }
             }
@@ -429,50 +310,37 @@ fun ShareScreen(
 }
 
 @Composable
-fun FileInfoCard(file: SharedFile, index: Int) {
+fun FolderFileInfoCard(file: SharedFile) {
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            if (file.fileName.contains("/")) {
-                // Show directory structure
-                val pathParts = file.fileName.split("/")
-                val fileName = pathParts.last()
-                val directory = pathParts.dropLast(1).joinToString("/")
-                
-                Text(
-                    text = fileName,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = "📁 $directory",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = formatFileSize(file.fileSize),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                Text(
-                    text = file.fileName,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = formatFileSize(file.fileSize),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            val pathParts = file.fileName.split("/")
+            val fileName = pathParts.last()
+            val directory = pathParts.dropLast(1).joinToString("/")
+            
+            Text(
+                text = fileName,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = "📁 $directory",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = formatFileSize(file.fileSize),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
 
 @Composable
-fun FileProgressCard(progress: UploadProgress) {
+fun FolderFileProgressCard(progress: UploadProgress) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -493,26 +361,19 @@ fun FileProgressCard(progress: UploadProgress) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    if (progress.fileName.contains("/")) {
-                        val pathParts = progress.fileName.split("/")
-                        val fileName = pathParts.last()
-                        val directory = pathParts.dropLast(1).joinToString("/")
-                        
-                        Text(
-                            text = fileName,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = "📁 $directory",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    } else {
-                        Text(
-                            text = progress.fileName,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
+                    val pathParts = progress.fileName.split("/")
+                    val fileName = pathParts.last()
+                    val directory = pathParts.dropLast(1).joinToString("/")
+                    
+                    Text(
+                        text = fileName,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "📁 $directory",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
                 
                 when (progress.status) {
@@ -556,5 +417,3 @@ fun FileProgressCard(progress: UploadProgress) {
         }
     }
 }
-
-// Functions moved to UploadUtils.kt

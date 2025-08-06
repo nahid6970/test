@@ -1,10 +1,15 @@
 import os
 import re
+import time
 from flask import Flask, request, send_from_directory, redirect, url_for, flash, render_template_string
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flashing messages
+
+# Configure Flask for better performance
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB max file size
+app.config['UPLOAD_TIMEOUT'] = 300  # 5 minutes timeout
 
 # Folder to store files permanently
 DESKTOP_PATH = os.path.expanduser('~/Desktop')
@@ -18,17 +23,30 @@ app.config['SHARE_FOLDER'] = SHARE_FOLDER
 def create_safe_filename(filename):
     """
     Create a safe filename that preserves spaces and most special characters
-    while removing only truly dangerous characters
+    while removing only truly dangerous characters. Handles directory paths.
     """
-    # Remove dangerous characters but preserve spaces and common symbols
-    safe_filename = re.sub(r'[<>:"|?*\x00-\x1f]', '_', filename)
-    # Prevent directory traversal
-    safe_filename = safe_filename.replace('..', '_')
-    # Remove leading/trailing whitespace and dots
-    safe_filename = safe_filename.strip('. ')
-    # Ensure filename is not empty
-    if not safe_filename:
-        safe_filename = 'unnamed_file'
+    # Split path into components to handle directories
+    path_parts = filename.split('/')
+    safe_parts = []
+    
+    for part in path_parts:
+        if not part:  # Skip empty parts
+            continue
+            
+        # Remove dangerous characters but preserve spaces and common symbols
+        safe_part = re.sub(r'[<>:"|?*\x00-\x1f]', '_', part)
+        # Prevent directory traversal
+        safe_part = safe_part.replace('..', '_')
+        # Remove leading/trailing whitespace and dots
+        safe_part = safe_part.strip('. ')
+        # Ensure part is not empty
+        if not safe_part:
+            safe_part = 'unnamed'
+            
+        safe_parts.append(safe_part)
+    
+    # Rejoin with forward slashes (works on both Windows and Unix)
+    safe_filename = '/'.join(safe_parts) if safe_parts else 'unnamed_file'
     return safe_filename
 
 # HTML template within the Python file (instead of an external index.html)
@@ -465,21 +483,38 @@ def index():
                 # Fallback to secure_filename for web uploads
                 filename = secure_filename(file.filename)
             
+            # Create directory structure if filename contains path separators
             file_path = os.path.join(app.config['SHARE_FOLDER'], filename)
+            directory = os.path.dirname(file_path)
+            if directory and directory != app.config['SHARE_FOLDER']:
+                os.makedirs(directory, exist_ok=True)
 
             try:
                 # Handle duplicate filenames by adding a number
                 counter = 1
                 base_name, extension = os.path.splitext(filename)
+                original_file_path = file_path
                 while os.path.exists(file_path):
                     filename = f"{base_name} ({counter}){extension}"
                     file_path = os.path.join(app.config['SHARE_FOLDER'], filename)
                     counter += 1
                 
+                # Save file with progress tracking for large files
+                start_time = time.time()
                 file.save(file_path)
+                end_time = time.time()
+                
+                # Log upload info for debugging
+                file_size = os.path.getsize(file_path)
+                upload_time = end_time - start_time
+                speed = file_size / upload_time if upload_time > 0 else 0
+                
+                print(f"✅ Uploaded: {filename} ({file_size} bytes) in {upload_time:.2f}s ({speed/1024:.1f} KB/s)")
+                
                 flash(f"File '{filename}' uploaded successfully.", "success")
                 return '', 200  # Success
             except Exception as e:
+                print(f"❌ Upload error for '{filename}': {e}")
                 flash(f"Server error saving '{filename}': {e}", "error")
                 return '', 500 # Internal Server Error
         else:
@@ -523,4 +558,11 @@ def clean():
     return redirect(url_for('index'))
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5002, debug=True)
+    # Optimized server settings for better performance
+    app.run(
+        host="0.0.0.0", 
+        port=5002, 
+        debug=False,  # Disable debug for better performance
+        threaded=True,  # Enable threading for concurrent requests
+        use_reloader=False  # Disable auto-reloader for stability
+    )
