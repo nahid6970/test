@@ -155,30 +155,6 @@ fun MainScreen(
                 Text("Upload Entire Folder")
             }
             
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Card(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "How to use:",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
-                    
-                    Text("1. Make sure your PC is running the Python server (upload_files.py)")
-                    Text("2. Ensure both devices are on the same network")
-                    Text("3. Set the correct server URL in settings")
-                    Text("4. Share files from any app and select 'Share to PC'")
-                    Text("5. Or use 'Upload Entire Folder' button above for folders")
-                    Text("6. If uploads are slow, check WiFi signal and close other apps using network")
-                }
-            }
-            
             Spacer(modifier = Modifier.height(24.dp))
             
             Card(
