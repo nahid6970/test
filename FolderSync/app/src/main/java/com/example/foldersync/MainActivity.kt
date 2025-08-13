@@ -313,14 +313,20 @@ fun SettingsDialog(
     onUrlChange: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
+    val sharedPrefs = context.getSharedPreferences("folder_sync_prefs", Context.MODE_PRIVATE)
+    
     var tempUrl by remember { mutableStateOf(currentUrl) }
+    var handleDuplicates by remember { 
+        mutableStateOf(sharedPrefs.getBoolean("handle_duplicates", true)) 
+    }
     
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Server Settings") },
+        title = { Text("Settings") },
         text = {
             Column {
-                Text("Enter your PC's IP address and port:")
+                Text("Server Configuration:")
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = tempUrl,
@@ -335,6 +341,34 @@ fun SettingsDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text("Duplicate File Handling:")
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Switch(
+                        checked = handleDuplicates,
+                        onCheckedChange = { handleDuplicates = it }
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Move duplicates to separate folders",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = if (handleDuplicates) "Creates dup1, dup2, etc. folders for duplicate files" 
+                                  else "Overwrites existing files with same name",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         },
         confirmButton = {
@@ -342,6 +376,7 @@ fun SettingsDialog(
                 onClick = {
                     if (tempUrl.isNotBlank()) {
                         onUrlChange(tempUrl)
+                        sharedPrefs.edit().putBoolean("handle_duplicates", handleDuplicates).apply()
                         onDismiss()
                     }
                 }

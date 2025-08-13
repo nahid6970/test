@@ -517,11 +517,16 @@ suspend fun uploadFileToServer(context: Context, serverUrl: String, folder: Sync
             // Create request body from temp file (like the working example)
             val requestBody = tempFile.asRequestBody("application/octet-stream".toMediaType())
             
+            // Get duplicate handling preference
+            val sharedPrefs = context.getSharedPreferences("folder_sync_prefs", Context.MODE_PRIVATE)
+            val handleDuplicates = sharedPrefs.getBoolean("handle_duplicates", true)
+            
             val multipartBody = okhttp3.MultipartBody.Builder()
                 .setType(okhttp3.MultipartBody.FORM)
                 .addFormDataPart("file", actualFileName, requestBody)
                 .addFormDataPart("original_filename", actualFileName)
                 .addFormDataPart("folder_path", folder.pcPath)
+                .addFormDataPart("handle_duplicates", handleDuplicates.toString())
                 .build()
             
             val request = okhttp3.Request.Builder()
