@@ -341,10 +341,17 @@ suspend fun startSync(
                 val failedFiles = mutableListOf<String>()
                 
                 files.forEachIndexed { fileIndex, file ->
+                    // Show full path in progress (folder/subfolder/file.txt)
+                    val displayName = if (file.relativePath.isEmpty()) {
+                        file.name
+                    } else {
+                        "${file.relativePath}/${file.name}"
+                    }
+                    
                     statuses[index] = statuses[index].copy(
                         progress = fileIndex.toFloat() / files.size,
                         filesProcessed = fileIndex,
-                        currentFile = file.name
+                        currentFile = displayName
                     )
                     onStatusUpdate(statuses.toList())
                     
@@ -436,7 +443,8 @@ suspend fun startSync(
 data class AndroidFile(
     val name: String,
     val uri: android.net.Uri,
-    val size: Long
+    val size: Long,
+    val relativePath: String = "" // Path relative to the root sync folder
 )
 
 suspend fun scanAndroidFolder(context: Context, folder: SyncFolder): List<AndroidFile> {
@@ -446,7 +454,7 @@ suspend fun scanAndroidFolder(context: Context, folder: SyncFolder): List<Androi
         // If we have a URI, scan that folder
         folder.androidUri?.let { uri ->
             val documentFile = DocumentFile.fromTreeUri(context, uri)
-            documentFile?.let { scanDocumentFolder(it, files) }
+            documentFile?.let { scanDocumentFolder(it, files, "") }
         }
         
         // No test files created - only sync real files
@@ -459,7 +467,7 @@ suspend fun scanAndroidFolder(context: Context, folder: SyncFolder): List<Androi
     return files
 }
 
-fun scanDocumentFolder(documentFile: DocumentFile, files: MutableList<AndroidFile>) {
+fun scanDocumentFolder(documentFile: DocumentFile, files: MutableList<AndroidFile>, currentPath: String) {
     try {
         documentFile.listFiles().forEach { file ->
             try {
@@ -468,16 +476,22 @@ fun scanDocumentFolder(documentFile: DocumentFile, files: MutableList<AndroidFil
                     val fileSize = file.length()
                     
                     if (!fileName.isNullOrBlank() && file.canRead() && fileSize > 0) {
-                        // Include all files regardless of size
+                        // Include all files regardless of size, with their relative path
                         files.add(AndroidFile(
                             name = fileName,
                             uri = file.uri,
-                            size = fileSize
+                            size = fileSize,
+                            relativePath = currentPath
                         ))
                     }
                 } else if (file.isDirectory && file.canRead()) {
-                    // Recursively scan subdirectories
-                    scanDocumentFolder(file, files)
+                    val folderName = file.name
+                    if (!folderName.isNullOrBlank()) {
+                        // Build the relative path for subdirectory
+                        val subPath = if (currentPath.isEmpty()) folderName else "$currentPath/$folderName"
+                        // Recursively scan subdirectories with updated path
+                        scanDocumentFolder(file, files, subPath)
+                    }
                 }
             } catch (e: Exception) {
                 // Skip files that can't be accessed
@@ -558,10 +572,17 @@ suspend fun uploadFileToServer(context: Context, serverUrl: String, folder: Sync
             val sharedPrefs = context.getSharedPreferences("folder_sync_prefs", Context.MODE_PRIVATE)
             val handleDuplicates = sharedPrefs.getBoolean("handle_duplicates", true)
             
+            // Build the full file path including subdirectories
+            val fullFilePath = if (file.relativePath.isEmpty()) {
+                actualFileName
+            } else {
+                "${file.relativePath}/$actualFileName"
+            }
+            
             val multipartBody = okhttp3.MultipartBody.Builder()
                 .setType(okhttp3.MultipartBody.FORM)
                 .addFormDataPart("file", actualFileName, requestBody)
-                .addFormDataPart("original_filename", actualFileName)
+                .addFormDataPart("original_filename", fullFilePath) // Include relative path
                 .addFormDataPart("folder_path", folder.pcPath)
                 .addFormDataPart("handle_duplicates", handleDuplicates.toString())
                 .build()
