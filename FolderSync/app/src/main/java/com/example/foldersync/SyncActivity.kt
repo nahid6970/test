@@ -111,7 +111,7 @@ fun SyncScreen(
                         Text("${(overallProgress * 100).roundToInt()}%")
                     }
                     LinearProgressIndicator(
-                        progress = overallProgress,
+                        progress = { overallProgress },
                         modifier = Modifier.fillMaxWidth()
                     )
                     
@@ -258,7 +258,7 @@ fun SyncFolderProgressCard(
             
             if (status.status == SyncState.SYNCING || status.status == SyncState.SCANNING) {
                 LinearProgressIndicator(
-                    progress = status.progress,
+                    progress = { status.progress },
                     modifier = Modifier.fillMaxWidth()
                 )
                 
@@ -304,7 +304,7 @@ suspend fun startSync(
     try {
         // Get server URL from preferences
         val sharedPrefs = context.getSharedPreferences("folder_sync_prefs", Context.MODE_PRIVATE)
-        val serverUrl = sharedPrefs.getString("server_url", "http://192.168.1.100:5013") ?: "http://192.168.1.100:5013"
+        val serverUrl = sharedPrefs.getString("server_url", "http://192.168.1.100:5016") ?: "http://192.168.1.100:5016"
         
         folders.forEachIndexed { index, folder ->
             try {
@@ -468,16 +468,12 @@ fun scanDocumentFolder(documentFile: DocumentFile, files: MutableList<AndroidFil
                     val fileSize = file.length()
                     
                     if (!fileName.isNullOrBlank() && file.canRead() && fileSize > 0) {
-                        // Skip very large files (over 100MB) to avoid memory issues
-                        if (fileSize > 100 * 1024 * 1024) {
-                            android.util.Log.w("FolderSync", "Skipping large file: $fileName (${fileSize / 1024 / 1024}MB)")
-                        } else {
-                            files.add(AndroidFile(
-                                name = fileName,
-                                uri = file.uri,
-                                size = fileSize
-                            ))
-                        }
+                        // Include all files regardless of size
+                        files.add(AndroidFile(
+                            name = fileName,
+                            uri = file.uri,
+                            size = fileSize
+                        ))
                     }
                 } else if (file.isDirectory && file.canRead()) {
                     // Recursively scan subdirectories

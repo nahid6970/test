@@ -28,14 +28,14 @@ A comprehensive Android app for synchronizing folders between your Android devic
 cd FolderSync
 python sync_server.py
 ```
-- Server runs on port **5013**
+- Server runs on port **5016**
 - Creates sync folders in `~/Desktop/SyncFolders/`
-- Access web interface at `http://localhost:5013`
+- Access web interface at `http://localhost:5016`
 
 ### 2. Android App Installation
 1. Build the APK: `./gradlew assembleDebug`
 2. Install on your Android device
-3. Configure server IP in settings (e.g., `http://192.168.1.100:5013`)
+3. Configure server IP in settings (e.g., `http://192.168.1.100:5016`)
 
 ### 3. Folder Configuration
 1. Open the app and tap the settings icon
@@ -73,7 +73,7 @@ python sync_server.py
 
 - Both devices on same WiFi network
 - Android device can reach PC's IP address
-- Port 5013 accessible (check firewall settings)
+- Port 5016 accessible (check firewall settings)
 
 ## File Handling
 
