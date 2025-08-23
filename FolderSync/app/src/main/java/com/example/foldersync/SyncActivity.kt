@@ -413,19 +413,11 @@ suspend fun scanAndroidFolder(context: Context, folder: SyncFolder): List<Androi
             documentFile?.let { scanDocumentFolder(it, files) }
         }
         
-        // If no files found from URI, create a test file for demonstration
-        if (files.isEmpty()) {
-            // Create a simple test file in memory
-            val testContent = "This is a test file created by FolderSync app at ${System.currentTimeMillis()}"
-            val testUri = createTestFile(context, "test_sync_${System.currentTimeMillis()}.txt", testContent)
-            files.add(AndroidFile("test_sync_file.txt", testUri, testContent.length.toLong()))
-        }
+        // No test files created - only sync real files
         
     } catch (e: Exception) {
-        // If scanning fails, create a test file
-        val testContent = "Test file - scanning failed: ${e.message}"
-        val testUri = createTestFile(context, "error_test.txt", testContent)
-        files.add(AndroidFile("error_test.txt", testUri, testContent.length.toLong()))
+        // Log error but don't create test files
+        android.util.Log.w("FolderSync", "Error scanning folder: ${e.message}")
     }
     
     return files
