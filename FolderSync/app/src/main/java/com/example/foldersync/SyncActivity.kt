@@ -347,6 +347,19 @@ suspend fun startSync(
                     // Upload file to server
                     uploadFileToServer(context, serverUrl, folder, file)
                     
+                    // Check if we should delete the file after successful sync
+                    val sharedPrefs = context.getSharedPreferences("folder_sync_prefs", Context.MODE_PRIVATE)
+                    val deleteSyncedItems = sharedPrefs.getBoolean("delete_synced_items", false)
+                    
+                    if (deleteSyncedItems) {
+                        try {
+                            deleteFileFromAndroid(context, file)
+                        } catch (e: Exception) {
+                            // Log deletion error but don't fail the sync
+                            android.util.Log.w("FolderSync", "Failed to delete ${file.name}: ${e.message}")
+                        }
+                    }
+                    
                     // Small delay to show progress
                     delay(100)
                 }
@@ -613,5 +626,36 @@ fun isNetworkAvailable(context: Context): Boolean {
         // For any other error, assume network is available
         android.util.Log.w("FolderSync", "Error checking network: ${e.message}")
         true
+    }
+}
+
+suspend fun deleteFileFromAndroid(context: Context, file: AndroidFile) = withContext(kotlinx.coroutines.Dispatchers.IO) {
+    try {
+        // Check if this is a test file in cache directory
+        if (file.uri.scheme == "file" && file.uri.path?.contains(context.cacheDir.absolutePath) == true) {
+            // Delete test files directly
+            val javaFile = java.io.File(file.uri.path!!)
+            if (javaFile.exists() && javaFile.delete()) {
+                android.util.Log.i("FolderSync", "Deleted test file: ${file.name}")
+            }
+            return@withContext
+        }
+        
+        // For real document files, use DocumentFile
+        val documentFile = androidx.documentfile.provider.DocumentFile.fromSingleUri(context, file.uri)
+        if (documentFile != null && documentFile.exists() && documentFile.canWrite()) {
+            if (documentFile.delete()) {
+                android.util.Log.i("FolderSync", "Successfully deleted: ${file.name}")
+            } else {
+                throw Exception("Failed to delete file (delete() returned false)")
+            }
+        } else {
+            throw Exception("File not found, not writable, or no permission")
+        }
+        
+    } catch (e: SecurityException) {
+        throw Exception("Permission denied to delete file")
+    } catch (e: Exception) {
+        throw Exception("Delete failed: ${e.message}")
     }
 }

@@ -320,6 +320,9 @@ fun SettingsDialog(
     var handleDuplicates by remember { 
         mutableStateOf(sharedPrefs.getBoolean("handle_duplicates", true)) 
     }
+    var deleteSyncedItems by remember { 
+        mutableStateOf(sharedPrefs.getBoolean("delete_synced_items", false)) 
+    }
     
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -369,6 +372,34 @@ fun SettingsDialog(
                         )
                     }
                 }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text("Post-Sync Actions:")
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Switch(
+                        checked = deleteSyncedItems,
+                        onCheckedChange = { deleteSyncedItems = it }
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Delete items after successful sync",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = if (deleteSyncedItems) "Files will be deleted from Android after uploading to PC" 
+                                  else "Files remain on Android after sync",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         },
         confirmButton = {
@@ -376,7 +407,10 @@ fun SettingsDialog(
                 onClick = {
                     if (tempUrl.isNotBlank()) {
                         onUrlChange(tempUrl)
-                        sharedPrefs.edit().putBoolean("handle_duplicates", handleDuplicates).apply()
+                        sharedPrefs.edit()
+                            .putBoolean("handle_duplicates", handleDuplicates)
+                            .putBoolean("delete_synced_items", deleteSyncedItems)
+                            .apply()
                         onDismiss()
                     }
                 }
