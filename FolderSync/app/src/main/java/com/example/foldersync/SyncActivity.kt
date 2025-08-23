@@ -336,6 +336,10 @@ suspend fun startSync(
                 onStatusUpdate(statuses.toList())
                 
                 // Upload each file
+                var successfulUploads = 0
+                var failedUploads = 0
+                val failedFiles = mutableListOf<String>()
+                
                 files.forEachIndexed { fileIndex, file ->
                     statuses[index] = statuses[index].copy(
                         progress = fileIndex.toFloat() / files.size,
@@ -344,33 +348,65 @@ suspend fun startSync(
                     )
                     onStatusUpdate(statuses.toList())
                     
-                    // Upload file to server
-                    uploadFileToServer(context, serverUrl, folder, file)
-                    
-                    // Check if we should delete the file after successful sync
-                    val sharedPrefs = context.getSharedPreferences("folder_sync_prefs", Context.MODE_PRIVATE)
-                    val deleteSyncedItems = sharedPrefs.getBoolean("delete_synced_items", false)
-                    
-                    if (deleteSyncedItems) {
-                        try {
-                            deleteFileFromAndroid(context, file)
-                        } catch (e: Exception) {
-                            // Log deletion error but don't fail the sync
-                            android.util.Log.w("FolderSync", "Failed to delete ${file.name}: ${e.message}")
+                    try {
+                        // Upload file to server
+                        uploadFileToServer(context, serverUrl, folder, file)
+                        successfulUploads++
+                        
+                        // Only delete if upload was successful AND deletion is enabled
+                        val sharedPrefs = context.getSharedPreferences("folder_sync_prefs", Context.MODE_PRIVATE)
+                        val deleteSyncedItems = sharedPrefs.getBoolean("delete_synced_items", false)
+                        
+                        if (deleteSyncedItems) {
+                            try {
+                                deleteFileFromAndroid(context, file)
+                                android.util.Log.i("FolderSync", "Successfully uploaded and deleted: ${file.name}")
+                            } catch (e: Exception) {
+                                // Log deletion error but don't fail the sync since upload succeeded
+                                android.util.Log.w("FolderSync", "Upload succeeded but failed to delete ${file.name}: ${e.message}")
+                            }
                         }
+                        
+                    } catch (uploadException: Exception) {
+                        // Upload failed - do NOT delete the file
+                        failedUploads++
+                        failedFiles.add(file.name)
+                        android.util.Log.e("FolderSync", "Upload failed for ${file.name}: ${uploadException.message}")
+                        // Continue with next file instead of failing entire folder
                     }
                     
                     // Small delay to show progress
                     delay(100)
                 }
                 
-                // Mark as completed
-                statuses[index] = statuses[index].copy(
-                    status = SyncState.COMPLETED,
-                    progress = 1f,
-                    filesProcessed = files.size,
-                    currentFile = ""
-                )
+                // Update final status based on results
+                if (failedUploads == 0) {
+                    // All files succeeded
+                    statuses[index] = statuses[index].copy(
+                        status = SyncState.COMPLETED,
+                        progress = 1f,
+                        filesProcessed = files.size,
+                        currentFile = ""
+                    )
+                } else if (successfulUploads > 0) {
+                    // Some files succeeded, some failed
+                    statuses[index] = statuses[index].copy(
+                        status = SyncState.ERROR,
+                        progress = 1f,
+                        filesProcessed = successfulUploads,
+                        currentFile = "",
+                        errorMessage = "Failed to upload ${failedUploads} files: ${failedFiles.take(3).joinToString(", ")}${if (failedFiles.size > 3) "..." else ""}"
+                    )
+                } else {
+                    // All files failed
+                    statuses[index] = statuses[index].copy(
+                        status = SyncState.ERROR,
+                        progress = 1f,
+                        filesProcessed = 0,
+                        currentFile = "",
+                        errorMessage = "Failed to upload all ${failedUploads} files"
+                    )
+                }
                 onStatusUpdate(statuses.toList())
                 
             } catch (e: Exception) {
