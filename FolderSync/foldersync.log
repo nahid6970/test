@@ -51,3 +51,18 @@
 2025-09-20 12:54:49,214 - INFO - 192.168.0.101 - - [20/Sep/2025 12:54:49] "POST /api/upload HTTP/1.1" 200 -
 2025-09-20 12:54:54,364 - ERROR - Upload error: 400 Bad Request: The browser (or proxy) sent a request that this server could not understand.
 2025-09-20 12:54:54,366 - INFO - 192.168.0.101 - - [20/Sep/2025 12:54:54] "[35m[1mPOST /api/upload HTTP/1.1[0m" 500 -
+2025-09-20 12:58:10,104 - INFO - Rclone is available and enabled
+2025-09-20 12:58:10,105 - INFO - Starting FolderSync Server
+2025-09-20 12:58:10,105 - INFO - Upload folder: C:\Users\nahid/Desktop/SyncFolders
+2025-09-20 12:58:10,106 - INFO - Server: http://0.0.0.0:5016
+2025-09-20 12:58:10,106 - INFO - Rclone: Enabled
+2025-09-20 12:58:11,402 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5016
+ * Running on http://192.168.0.101:5016
+2025-09-20 12:58:11,402 - INFO - [33mPress CTRL+C to quit[0m
+2025-09-20 12:58:13,255 - INFO - Rclone sync: Selected Job Circular - June 2025.pdf -> C:/test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 12:58:13,256 - INFO - Using absolute path: C:\test
+2025-09-20 12:58:13,323 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 12:58:13,700 - INFO - Rclone sync completed successfully: Selected_Job_Circular_-_June_2025.pdf
+2025-09-20 12:58:13,736 - INFO - 192.168.0.101 - - [20/Sep/2025 12:58:13] "POST /api/rclone-sync HTTP/1.1" 200 -
