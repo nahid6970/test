@@ -555,141 +555,165 @@ fun AdvancedSettingsDialog(
         onDismissRequest = onDismiss,
         title = { Text("Rclone Sync Settings") },
         text = {
-            Column(
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 600.dp),
+                    .heightIn(max = 500.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = "Folder: ${folder.name}",
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                
-                Text(
-                    text = "Direction: ${when(folder.syncDirection) {
-                        SyncDirection.ANDROID_TO_PC -> "Android to PC"
-                        SyncDirection.PC_TO_ANDROID -> "PC to Android"
-                    }}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                // Rclone Command Selection
-                Text("Rclone Command:", fontWeight = FontWeight.Bold)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
+                item {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        RadioButton(
-                            selected = rcloneCommand == RcloneCommand.SYNC,
-                            onClick = { rcloneCommand = RcloneCommand.SYNC }
+                        Text(
+                            text = "Folder: ${folder.name}",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
                         )
-                        Column {
-                            Text("Sync", fontWeight = FontWeight.Medium)
-                            Text(
-                                "Make destination identical",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        RadioButton(
-                            selected = rcloneCommand == RcloneCommand.COPY,
-                            onClick = { rcloneCommand = RcloneCommand.COPY }
+                        
+                        Text(
+                            text = "Direction: ${when(folder.syncDirection) {
+                                SyncDirection.ANDROID_TO_PC -> "Android to PC"
+                                SyncDirection.PC_TO_ANDROID -> "PC to Android"
+                            }}",
+                            style = MaterialTheme.typography.bodyMedium
                         )
-                        Column {
-                            Text("Copy", fontWeight = FontWeight.Medium)
-                            Text(
-                                "Copy files to destination",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // Rclone Command Selection
+                        Text("Rclone Command:", fontWeight = FontWeight.Bold)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                RadioButton(
+                                    selected = rcloneCommand == RcloneCommand.SYNC,
+                                    onClick = { rcloneCommand = RcloneCommand.SYNC }
+                                )
+                                Column {
+                                    Text("Sync", fontWeight = FontWeight.Medium)
+                                    Text(
+                                        "Make destination identical",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                RadioButton(
+                                    selected = rcloneCommand == RcloneCommand.COPY,
+                                    onClick = { rcloneCommand = RcloneCommand.COPY }
+                                )
+                                Column {
+                                    Text("Copy", fontWeight = FontWeight.Medium)
+                                    Text(
+                                        "Copy files to destination",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
                         }
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // Rclone Flags
+                        Text("Rclone Flags:", fontWeight = FontWeight.Bold)
                     }
                 }
                 
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                // Rclone Flags
-                Text("Rclone Flags:", fontWeight = FontWeight.Bold)
-                
                 // Performance flags
-                FlagCheckbox(
-                    checked = flagProgress,
-                    onCheckedChange = { flagProgress = it },
-                    title = "--progress",
-                    description = "Show transfer progress"
-                )
+                item {
+                    FlagCheckbox(
+                        checked = flagProgress,
+                        onCheckedChange = { flagProgress = it },
+                        title = "--progress",
+                        description = "Show transfer progress"
+                    )
+                }
                 
-                FlagCheckbox(
-                    checked = flagTransfers4,
-                    onCheckedChange = { flagTransfers4 = it },
-                    title = "--transfers=4",
-                    description = "Number of parallel transfers"
-                )
+                item {
+                    FlagCheckbox(
+                        checked = flagTransfers4,
+                        onCheckedChange = { flagTransfers4 = it },
+                        title = "--transfers=4",
+                        description = "Number of parallel transfers"
+                    )
+                }
                 
-                FlagCheckbox(
-                    checked = flagCheckers8,
-                    onCheckedChange = { flagCheckers8 = it },
-                    title = "--checkers=8",
-                    description = "Number of checkers to run in parallel"
-                )
+                item {
+                    FlagCheckbox(
+                        checked = flagCheckers8,
+                        onCheckedChange = { flagCheckers8 = it },
+                        title = "--checkers=8",
+                        description = "Number of checkers to run in parallel"
+                    )
+                }
                 
                 // Timeout flags
-                FlagCheckbox(
-                    checked = flagContimeout60s,
-                    onCheckedChange = { flagContimeout60s = it },
-                    title = "--contimeout=60s",
-                    description = "Connection timeout"
-                )
+                item {
+                    FlagCheckbox(
+                        checked = flagContimeout60s,
+                        onCheckedChange = { flagContimeout60s = it },
+                        title = "--contimeout=60s",
+                        description = "Connection timeout"
+                    )
+                }
                 
-                FlagCheckbox(
-                    checked = flagTimeout300s,
-                    onCheckedChange = { flagTimeout300s = it },
-                    title = "--timeout=300s",
-                    description = "IO idle timeout"
-                )
+                item {
+                    FlagCheckbox(
+                        checked = flagTimeout300s,
+                        onCheckedChange = { flagTimeout300s = it },
+                        title = "--timeout=300s",
+                        description = "IO idle timeout"
+                    )
+                }
                 
-                FlagCheckbox(
-                    checked = flagRetries3,
-                    onCheckedChange = { flagRetries3 = it },
-                    title = "--retries=3",
-                    description = "Retry operations on failure"
-                )
+                item {
+                    FlagCheckbox(
+                        checked = flagRetries3,
+                        onCheckedChange = { flagRetries3 = it },
+                        title = "--retries=3",
+                        description = "Retry operations on failure"
+                    )
+                }
                 
                 // Advanced flags
-                FlagCheckbox(
-                    checked = flagIgnoreExisting,
-                    onCheckedChange = { flagIgnoreExisting = it },
-                    title = "--ignore-existing",
-                    description = "Skip files that exist on destination"
-                )
+                item {
+                    FlagCheckbox(
+                        checked = flagIgnoreExisting,
+                        onCheckedChange = { flagIgnoreExisting = it },
+                        title = "--ignore-existing",
+                        description = "Skip files that exist on destination"
+                    )
+                }
                 
-                FlagCheckbox(
-                    checked = flagTrackRenames,
-                    onCheckedChange = { flagTrackRenames = it },
-                    title = "--track-renames",
-                    description = "Track file renames and do server-side moves"
-                )
+                item {
+                    FlagCheckbox(
+                        checked = flagTrackRenames,
+                        onCheckedChange = { flagTrackRenames = it },
+                        title = "--track-renames",
+                        description = "Track file renames and do server-side moves"
+                    )
+                }
                 
-                FlagCheckbox(
-                    checked = flagFastList,
-                    onCheckedChange = { flagFastList = it },
-                    title = "--fast-list",
-                    description = "Use recursive list if available"
-                )
+                item {
+                    FlagCheckbox(
+                        checked = flagFastList,
+                        onCheckedChange = { flagFastList = it },
+                        title = "--fast-list",
+                        description = "Use recursive list if available"
+                    )
+                }
             }
         },
         confirmButton = {
