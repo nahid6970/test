@@ -16,11 +16,11 @@
 *.rar
 
 # Images and media
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.bmp
+# *.png
+# *.jpg
+# *.jpeg
+# *.gif
+# *.bmp
 *.tiff
 *.svg
 *.mp3
