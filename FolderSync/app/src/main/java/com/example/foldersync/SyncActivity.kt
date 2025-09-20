@@ -324,9 +324,27 @@ suspend fun startSync(
                 // Handle Android to PC sync
                 if (folder.syncDirection == SyncDirection.ANDROID_TO_PC) {
                     val androidFiles = scanAndroidFolder(context, folder)
-                    totalOperations += androidFiles.size
                     
-                    if (androidFiles.isNotEmpty()) {
+                    // For Mirror mode, compare with PC files first
+                    val allFilesToSync = if (folder.androidToPcMode == SyncMode.MIRROR) {
+                        val pcFiles = scanPcFolder(serverUrl, folder)
+                        compareAndFilterFiles(androidFiles, pcFiles, "📱→💻")
+                    } else {
+                        androidFiles.map { FileToSync(it, null, SyncAction.UPLOAD) }
+                    }
+                    
+                    // Only count files that actually need to be processed (exclude SKIP actions)
+                    val filesToSync = allFilesToSync.filter { it.action != SyncAction.SKIP }
+                    val skippedFiles = allFilesToSync.filter { it.action == SyncAction.SKIP }
+                    
+                    totalOperations += filesToSync.size
+                    
+                    // Log skipped files
+                    skippedFiles.forEach { skipped ->
+                        android.util.Log.i("FolderSync", "⏭️ Skipped file: ${skipped.androidFile?.name} (already exists or conflict)")
+                    }
+                    
+                    if (filesToSync.isNotEmpty()) {
                         statuses[index] = statuses[index].copy(
                             status = SyncState.SYNCING,
                             totalFiles = totalOperations,
@@ -334,11 +352,11 @@ suspend fun startSync(
                         )
                         onStatusUpdate(statuses.toList())
                         
-                        androidFiles.forEachIndexed { fileIndex, file ->
-                            val displayName = if (file.relativePath.isEmpty()) {
-                                file.name
+                        filesToSync.forEachIndexed { fileIndex, fileToSync ->
+                            val displayName = if (fileToSync.androidFile!!.relativePath.isEmpty()) {
+                                fileToSync.androidFile.name
                             } else {
-                                "${file.relativePath}/${file.name}"
+                                "${fileToSync.androidFile.relativePath}/${fileToSync.androidFile.name}"
                             }
                             
                             statuses[index] = statuses[index].copy(
@@ -349,23 +367,31 @@ suspend fun startSync(
                             onStatusUpdate(statuses.toList())
                             
                             try {
-                                uploadFileToServer(context, serverUrl, folder, file)
-                                completedOperations++
-                                
-                                // Handle post-sync actions based on sync mode
-                                if (folder.androidToPcMode == SyncMode.COPY_AND_DELETE) {
-                                    try {
-                                        deleteFileFromAndroid(context, file)
-                                        android.util.Log.i("FolderSync", "Successfully uploaded and deleted: ${file.name}")
-                                    } catch (e: Exception) {
-                                        android.util.Log.w("FolderSync", "Upload succeeded but failed to delete ${file.name}: ${e.message}")
+                                when (fileToSync.action) {
+                                    SyncAction.UPLOAD -> {
+                                        uploadFileToServer(context, serverUrl, folder, fileToSync.androidFile)
+                                        completedOperations++
+                                        
+                                        // Handle post-sync actions based on sync mode
+                                        if (folder.androidToPcMode == SyncMode.COPY_AND_DELETE) {
+                                            try {
+                                                deleteFileFromAndroid(context, fileToSync.androidFile)
+                                                android.util.Log.i("FolderSync", "Successfully uploaded and deleted: ${fileToSync.androidFile.name}")
+                                            } catch (e: Exception) {
+                                                android.util.Log.w("FolderSync", "Upload succeeded but failed to delete ${fileToSync.androidFile.name}: ${e.message}")
+                                            }
+                                        }
+                                    }
+
+                                    else -> {
+                                        completedOperations++
                                     }
                                 }
                                 
                             } catch (uploadException: Exception) {
                                 failedOperations++
-                                failedFiles.add("📱→💻 ${file.name}")
-                                android.util.Log.e("FolderSync", "Upload failed for ${file.name}: ${uploadException.message}")
+                                failedFiles.add("📱→💻 ${fileToSync.androidFile!!.name}")
+                                android.util.Log.e("FolderSync", "Upload failed for ${fileToSync.androidFile.name}: ${uploadException.message}")
                             }
                             
                             delay(100)
@@ -376,9 +402,27 @@ suspend fun startSync(
                 // Handle PC to Android sync
                 if (folder.syncDirection == SyncDirection.PC_TO_ANDROID) {
                     val pcFiles = scanPcFolder(serverUrl, folder)
-                    totalOperations += pcFiles.size
                     
-                    if (pcFiles.isNotEmpty()) {
+                    // For Mirror mode, compare with Android files first
+                    val allFilesToSync = if (folder.pcToAndroidMode == SyncMode.MIRROR) {
+                        val androidFiles = scanAndroidFolder(context, folder)
+                        compareAndFilterFiles(androidFiles, pcFiles, "💻→📱")
+                    } else {
+                        pcFiles.map { FileToSync(null, it, SyncAction.DOWNLOAD) }
+                    }
+                    
+                    // Only count files that actually need to be processed (exclude SKIP actions)
+                    val filesToSync = allFilesToSync.filter { it.action != SyncAction.SKIP }
+                    val skippedFiles = allFilesToSync.filter { it.action == SyncAction.SKIP }
+                    
+                    totalOperations += filesToSync.size
+                    
+                    // Log skipped files
+                    skippedFiles.forEach { skipped ->
+                        android.util.Log.i("FolderSync", "⏭️ Skipped file: ${skipped.pcFile?.path} (already exists or conflict)")
+                    }
+                    
+                    if (filesToSync.isNotEmpty()) {
                         statuses[index] = statuses[index].copy(
                             status = SyncState.SYNCING,
                             totalFiles = totalOperations,
@@ -386,32 +430,40 @@ suspend fun startSync(
                         )
                         onStatusUpdate(statuses.toList())
                         
-                        pcFiles.forEachIndexed { fileIndex, file ->
+                        filesToSync.forEachIndexed { fileIndex, fileToSync ->
                             statuses[index] = statuses[index].copy(
                                 progress = completedOperations.toFloat() / totalOperations,
                                 filesProcessed = completedOperations,
-                                currentFile = "💻→📱 ${file.path}"
+                                currentFile = "💻→📱 ${fileToSync.pcFile?.path ?: "unknown"}"
                             )
                             onStatusUpdate(statuses.toList())
                             
                             try {
-                                downloadFileFromServer(context, serverUrl, folder, file)
-                                completedOperations++
-                                
-                                // Handle post-sync actions based on sync mode
-                                if (folder.pcToAndroidMode == SyncMode.COPY_AND_DELETE) {
-                                    try {
-                                        deleteFileFromServer(serverUrl, folder, file)
-                                        android.util.Log.i("FolderSync", "Successfully downloaded and deleted: ${file.path}")
-                                    } catch (e: Exception) {
-                                        android.util.Log.w("FolderSync", "Download succeeded but failed to delete ${file.path}: ${e.message}")
+                                when (fileToSync.action) {
+                                    SyncAction.DOWNLOAD -> {
+                                        downloadFileFromServer(context, serverUrl, folder, fileToSync.pcFile!!)
+                                        completedOperations++
+                                        
+                                        // Handle post-sync actions based on sync mode
+                                        if (folder.pcToAndroidMode == SyncMode.COPY_AND_DELETE) {
+                                            try {
+                                                deleteFileFromServer(serverUrl, folder, fileToSync.pcFile)
+                                                android.util.Log.i("FolderSync", "Successfully downloaded and deleted: ${fileToSync.pcFile.path}")
+                                            } catch (e: Exception) {
+                                                android.util.Log.w("FolderSync", "Download succeeded but failed to delete ${fileToSync.pcFile.path}: ${e.message}")
+                                            }
+                                        }
+                                    }
+
+                                    else -> {
+                                        completedOperations++
                                     }
                                 }
                                 
                             } catch (downloadException: Exception) {
                                 failedOperations++
-                                failedFiles.add("💻→📱 ${file.path}")
-                                android.util.Log.e("FolderSync", "Download failed for ${file.path}: ${downloadException.message}")
+                                failedFiles.add("💻→📱 ${fileToSync.pcFile?.path ?: "unknown"}")
+                                android.util.Log.e("FolderSync", "Download failed for ${fileToSync.pcFile?.path}: ${downloadException.message}")
                             }
                             
                             delay(100)
@@ -903,4 +955,91 @@ suspend fun deleteFileFromServer(serverUrl: String, folder: SyncFolder, file: Pc
         android.util.Log.e("FolderSync", "Error deleting file from server ${file.path}: ${e.message}")
         throw e
     }
+}
+
+data class FileToSync(
+    val androidFile: AndroidFile?,
+    val pcFile: PcFile?,
+    val action: SyncAction
+)
+
+enum class SyncAction {
+    UPLOAD,      // Upload Android file to PC
+    DOWNLOAD,    // Download PC file to Android
+    SKIP,        // Skip due to conflict or already exists
+    DELETE       // Delete file (for future use)
+}
+
+fun compareAndFilterFiles(
+    androidFiles: List<AndroidFile>,
+    pcFiles: List<PcFile>,
+    direction: String
+): List<FileToSync> {
+    val filesToSync = mutableListOf<FileToSync>()
+    
+    // Create maps for quick lookup
+    val androidFileMap = androidFiles.associateBy { 
+        if (it.relativePath.isEmpty()) it.name else "${it.relativePath}/${it.name}"
+    }
+    val pcFileMap = pcFiles.associateBy { it.path }
+    
+    when (direction) {
+        "📱→💻" -> {
+            // Android to PC sync - check which Android files need to be uploaded
+            androidFiles.forEach { androidFile ->
+                val fullPath = if (androidFile.relativePath.isEmpty()) {
+                    androidFile.name
+                } else {
+                    "${androidFile.relativePath}/${androidFile.name}"
+                }
+                
+                val matchingPcFile = pcFileMap[fullPath]
+                
+                when {
+                    matchingPcFile == null -> {
+                        // File doesn't exist on PC, upload it
+                        filesToSync.add(FileToSync(androidFile, null, SyncAction.UPLOAD))
+                        android.util.Log.i("FolderSync", "📱→💻 Will upload new file: $fullPath")
+                    }
+                    matchingPcFile.size == androidFile.size -> {
+                        // Same name and size, assume it's the same file - skip
+                        android.util.Log.i("FolderSync", "📱→💻 Skipping identical file: $fullPath (${androidFile.size} bytes)")
+                    }
+                    else -> {
+                        // Same name but different size - warn and skip
+                        filesToSync.add(FileToSync(androidFile, matchingPcFile, SyncAction.SKIP))
+                        android.util.Log.w("FolderSync", "⚠️ File conflict: $fullPath - Android: ${androidFile.size} bytes, PC: ${matchingPcFile.size} bytes")
+                    }
+                }
+            }
+        }
+        
+        "💻→📱" -> {
+            // PC to Android sync - check which PC files need to be downloaded
+            pcFiles.forEach { pcFile ->
+                val matchingAndroidFile = androidFileMap[pcFile.path]
+                
+                when {
+                    matchingAndroidFile == null -> {
+                        // File doesn't exist on Android, download it
+                        filesToSync.add(FileToSync(null, pcFile, SyncAction.DOWNLOAD))
+                        android.util.Log.i("FolderSync", "💻→📱 Will download new file: ${pcFile.path}")
+                    }
+                    matchingAndroidFile.size == pcFile.size -> {
+                        // Same name and size, assume it's the same file - skip
+                        android.util.Log.i("FolderSync", "💻→📱 Skipping identical file: ${pcFile.path} (${pcFile.size} bytes)")
+                    }
+                    else -> {
+                        // Same name but different size - warn and skip
+                        filesToSync.add(FileToSync(matchingAndroidFile, pcFile, SyncAction.SKIP))
+                        android.util.Log.w("FolderSync", "⚠️ File conflict: ${pcFile.path} - PC: ${pcFile.size} bytes, Android: ${matchingAndroidFile.size} bytes")
+                    }
+                }
+            }
+        }
+    }
+    
+    android.util.Log.i("FolderSync", "$direction Mirror mode: ${filesToSync.count { it.action != SyncAction.SKIP }} files to sync, ${filesToSync.count { it.action == SyncAction.SKIP }} conflicts skipped")
+    
+    return filesToSync
 }

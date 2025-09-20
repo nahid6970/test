@@ -147,6 +147,12 @@ def scan_folder():
         files_info = scan_directory(full_path)
         print(f"📊 Found {len(files_info)} files")
         
+        # Log some file details for debugging
+        for file_info in files_info[:3]:  # Show first 3 files
+            print(f"  📄 {file_info['path']} - {file_info['size']} bytes")
+        if len(files_info) > 3:
+            print(f"  ... and {len(files_info) - 3} more files")
+        
         return jsonify({
             'folder_path': folder_path,
             'files': files_info,
