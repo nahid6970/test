@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 
 import androidx.compose.material3.*
+import androidx.compose.ui.draw.scale
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -171,21 +172,7 @@ fun MainScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(syncFolders) { folder ->
-                        SyncFolderCard(
-                            folder = folder,
-                            onToggleEnabled = { enabled ->
-                                syncFolders = syncFolders.map { 
-                                    if (it.id == folder.id) it.copy(isEnabled = enabled) else it 
-                                }
-                                saveSyncFolders(context, syncFolders)
-                            },
-                            onEdit = { editingFolder = folder },
-                            onDelete = {
-                                syncFolders = syncFolders.filter { it.id != folder.id }
-                                saveSyncFolders(context, syncFolders)
-                            },
-                            onAdvancedSettings = { advancedSettingsFolder = folder }
-                        )
+                        SyncFolderCard(folder = folder)
                     }
                 }
             }
@@ -264,79 +251,143 @@ fun MainScreen(
 
 @Composable
 fun SyncFolderCard(
-    folder: SyncFolder,
-    onToggleEnabled: (Boolean) -> Unit,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit,
-    onAdvancedSettings: () -> Unit
+    folder: SyncFolder
 ) {
+    val context = LocalContext.current
+    var syncFolders by remember { mutableStateOf(loadSyncFolders(context)) }
+    var editingFolder by remember { mutableStateOf<SyncFolder?>(null) }
+    var advancedSettingsFolder by remember { mutableStateOf<SyncFolder?>(null) }
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            Row(
+            // New improved layout
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Column(modifier = Modifier.weight(1f)) {
+                // Folder Name (prominent)
+                Text(
+                    text = folder.name,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                
+                // Source → Destination Path
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = folder.name,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
-                    Text(
-                        text = "📱 ${folder.androidPath}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "💻 ${folder.pcPath}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "Direction: ${when(folder.syncDirection) {
-                            SyncDirection.ANDROID_TO_PC -> "Android to PC"
-                            SyncDirection.PC_TO_ANDROID -> "PC to Android"
-                        }}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
+                        text = when(folder.syncDirection) {
+                            SyncDirection.ANDROID_TO_PC -> "📱 ${folder.androidPath}"
+                            SyncDirection.PC_TO_ANDROID -> "💻 ${folder.pcPath}"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
                     )
                     
-                    // Show sync modes in a compact format
-                    val syncModeText = when(folder.syncDirection) {
-                        SyncDirection.ANDROID_TO_PC -> "📱→💻 ${folder.androidToPcMode.name.replace("_", " ").lowercase()}"
-                        SyncDirection.PC_TO_ANDROID -> "💻→📱 ${folder.pcToAndroidMode.name.replace("_", " ").lowercase()}"
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Sync direction",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
                     
                     Text(
-                        text = syncModeText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = when(folder.syncDirection) {
+                            SyncDirection.ANDROID_TO_PC -> "💻 ${folder.pcPath}"
+                            SyncDirection.PC_TO_ANDROID -> "📱 ${folder.androidPath}"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
                     )
                 }
                 
+                // Type: Mirror/Sync etc
+                Text(
+                    text = "Type: ${when(folder.syncDirection) {
+                        SyncDirection.ANDROID_TO_PC -> folder.androidToPcMode.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }
+                        SyncDirection.PC_TO_ANDROID -> folder.pcToAndroidMode.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }
+                    }}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.secondary,
+                    fontWeight = FontWeight.Medium
+                )
+                
+                // Bottom row: Enable/Disable + Action buttons
                 Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Switch(
-                        checked = folder.isEnabled,
-                        onCheckedChange = onToggleEnabled
-                    )
-                    
-                    IconButton(onClick = onAdvancedSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Advanced Settings")
+                    // Enable/Disable status
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Switch(
+                            checked = folder.isEnabled,
+                            onCheckedChange = { enabled ->
+                                val updatedFolder = folder.copy(isEnabled = enabled)
+                                val updatedFolders = syncFolders.map { 
+                                    if (it.id == folder.id) updatedFolder else it 
+                                }
+                                syncFolders = updatedFolders
+                                saveSyncFolders(context, updatedFolders)
+                            },
+                            modifier = Modifier.scale(0.8f)
+                        )
+                        Text(
+                            text = if (folder.isEnabled) "Enabled" else "Disabled",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (folder.isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     
-                    IconButton(onClick = onEdit) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit")
-                    }
-                    
-                    IconButton(onClick = onDelete) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete")
+                    // Action buttons
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Settings button
+                        IconButton(
+                            onClick = { advancedSettingsFolder = folder }
+                        ) {
+                            Icon(
+                                Icons.Default.Settings,
+                                contentDescription = "Settings",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        
+                        // Edit button
+                        IconButton(
+                            onClick = { editingFolder = folder }
+                        ) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = "Edit",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        
+                        // Delete button
+                        IconButton(
+                            onClick = {
+                                syncFolders = syncFolders.filter { it.id != folder.id }
+                                saveSyncFolders(context, syncFolders)
+                            }
+                        ) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Delete",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             }

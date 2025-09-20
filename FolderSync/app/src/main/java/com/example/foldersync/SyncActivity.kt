@@ -368,7 +368,8 @@ suspend fun startSync(
                 // Update status to scanning
                 statuses[index] = statuses[index].copy(
                     status = SyncState.SCANNING,
-                    progress = 0f
+                    progress = 0f,
+                    currentFile = "Scanning Android folder..."
                 )
                 onStatusUpdate(statuses.toList())
                 
@@ -723,7 +724,7 @@ data class AndroidFile(
     val lastModified: Long = 0L // Last modified timestamp
 )
 
-suspend fun scanAndroidFolder(context: Context, folder: SyncFolder): List<AndroidFile> {
+suspend fun scanAndroidFolder(context: Context, folder: SyncFolder): List<AndroidFile> = withContext(kotlinx.coroutines.Dispatchers.IO) {
     val files = mutableListOf<AndroidFile>()
     
     try {
@@ -740,7 +741,7 @@ suspend fun scanAndroidFolder(context: Context, folder: SyncFolder): List<Androi
         android.util.Log.w("FolderSync", "Error scanning folder: ${e.message}")
     }
     
-    return files
+    files
 }
 
 fun scanDocumentFolder(documentFile: DocumentFile, files: MutableList<AndroidFile>, currentPath: String) {
