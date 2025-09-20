@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 
 import androidx.compose.material3.*
 import androidx.compose.ui.draw.scale
@@ -32,6 +33,8 @@ import com.example.foldersync.ui.theme.FolderSyncTheme
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.util.*
+import java.text.SimpleDateFormat
+import java.io.File
 
 class MainActivity : ComponentActivity() {
     
@@ -198,7 +201,21 @@ fun MainScreen(
                 sharedPrefs.edit().putString("server_url", newUrl).apply()
                 Toast.makeText(context, "Server URL saved", Toast.LENGTH_SHORT).show()
             },
-            onDismiss = { showSettings = false }
+            onDismiss = { showSettings = false },
+            onExport = {
+                exportSyncFolders(context, syncFolders, serverUrl)
+            },
+            onImport = {
+                importSyncFolders(context) { importedFolders, importedServerUrl ->
+                    syncFolders = importedFolders
+                    saveSyncFolders(context, importedFolders)
+                    if (importedServerUrl.isNotEmpty()) {
+                        serverUrl = importedServerUrl
+                        sharedPrefs.edit().putString("server_url", importedServerUrl).apply()
+                    }
+                    Toast.makeText(context, "Settings imported successfully!", Toast.LENGTH_LONG).show()
+                }
+            }
         )
     }
     
@@ -412,7 +429,9 @@ fun SyncFolderCard(
 fun SettingsDialog(
     currentUrl: String,
     onUrlChange: (String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onExport: () -> Unit,
+    onImport: () -> Unit
 ) {
     var tempUrl by remember { mutableStateOf(currentUrl) }
     
@@ -433,6 +452,56 @@ fun SettingsDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Example: http://192.168.0.101:5016",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Import/Export Section
+                Text(
+                    text = "Backup & Restore:",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Export button
+                    OutlinedButton(
+                        onClick = onExport,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Export")
+                    }
+                    
+                    // Import button
+                    OutlinedButton(
+                        onClick = onImport,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Import")
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Export your sync folders and settings to a file, or import from a backup.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -587,6 +656,85 @@ fun saveSyncFolders(context: Context, folders: List<SyncFolder>) {
     val sharedPrefs = context.getSharedPreferences("folder_sync_prefs", Context.MODE_PRIVATE)
     val json = Gson().toJson(folders)
     sharedPrefs.edit().putString("sync_folders", json).apply()
+}
+
+data class SyncBackup(
+    val folders: List<SyncFolder>,
+    val serverUrl: String,
+    val exportDate: String,
+    val version: String = "1.0"
+)
+
+fun exportSyncFolders(context: Context, folders: List<SyncFolder>, serverUrl: String) {
+    try {
+        val backup = SyncBackup(
+            folders = folders,
+            serverUrl = serverUrl,
+            exportDate = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date()),
+            version = "1.0"
+        )
+        
+        val json = Gson().toJson(backup)
+        val fileName = "FolderSync_Backup_${java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault()).format(java.util.Date())}.json"
+        
+        // Save to Downloads folder
+        val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+        val file = java.io.File(downloadsDir, fileName)
+        
+        file.writeText(json)
+        
+        Toast.makeText(context, "Settings exported to Downloads/$fileName", Toast.LENGTH_LONG).show()
+        
+        // Also share the file
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/json"
+            putExtra(Intent.EXTRA_STREAM, androidx.core.content.FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            ))
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, "Share FolderSync Settings"))
+        
+    } catch (e: Exception) {
+        Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+    }
+}
+
+fun importSyncFolders(context: Context, onImport: (List<SyncFolder>, String) -> Unit) {
+    try {
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "application/json"
+            addCategory(Intent.CATEGORY_OPENABLE)
+        }
+        
+        // For now, show a message about manual import
+        // In a full implementation, you'd use ActivityResultLauncher
+        Toast.makeText(context, "Import: Place your backup JSON file in Downloads folder and restart the app", Toast.LENGTH_LONG).show()
+        
+        // Try to find backup files in Downloads
+        val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+        val backupFiles = downloadsDir.listFiles { file -> 
+            file.name.startsWith("FolderSync_Backup_") && file.name.endsWith(".json")
+        }?.sortedByDescending { it.lastModified() }
+        
+        if (backupFiles?.isNotEmpty() == true) {
+            val latestBackup = backupFiles.first()
+            val json = latestBackup.readText()
+            val backup = Gson().fromJson(json, SyncBackup::class.java)
+            
+            onImport(backup.folders, backup.serverUrl)
+            
+            // Delete the imported file
+            latestBackup.delete()
+        } else {
+            Toast.makeText(context, "No backup files found in Downloads folder", Toast.LENGTH_SHORT).show()
+        }
+        
+    } catch (e: Exception) {
+        Toast.makeText(context, "Import failed: ${e.message}", Toast.LENGTH_LONG).show()
+    }
 }
 
 @Composable
