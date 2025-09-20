@@ -348,18 +348,24 @@ suspend fun startSync(
                             onStatusUpdate(statuses.toList())
                             
                             try {
-                                uploadFileToServer(context, serverUrl, folder, file)
-                                completedOperations++
-                                
-                                // Handle post-sync actions based on sync mode
-                                if (folder.androidToPcMode == SyncMode.COPY_AND_DELETE) {
-                                    try {
-                                        deleteFileFromAndroid(context, file)
-                                        android.util.Log.i("FolderSync", "Successfully uploaded and deleted: ${file.name}")
-                                    } catch (e: Exception) {
-                                        android.util.Log.w("FolderSync", "Upload succeeded but failed to delete ${file.name}: ${e.message}")
+                                if (folder.useRclone) {
+                                    // Use rclone for sync
+                                    uploadFileWithRclone(context, serverUrl, folder, file)
+                                } else {
+                                    // Use legacy upload method
+                                    uploadFileToServer(context, serverUrl, folder, file)
+                                    
+                                    // Handle post-sync actions based on sync options
+                                    if (folder.deleteAfterTransfer) {
+                                        try {
+                                            deleteFileFromAndroid(context, file)
+                                            android.util.Log.i("FolderSync", "Successfully uploaded and deleted: ${file.name}")
+                                        } catch (e: Exception) {
+                                            android.util.Log.w("FolderSync", "Upload succeeded but failed to delete ${file.name}: ${e.message}")
+                                        }
                                     }
                                 }
+                                completedOperations++
                                 
                             } catch (uploadException: Exception) {
                                 failedOperations++
@@ -575,13 +581,10 @@ suspend fun uploadFileToServer(context: Context, serverUrl: String, folder: Sync
                 "${file.relativePath}/$actualFileName"
             }
             
-            // Determine sync behavior based on sync mode
-            val syncMode = folder.androidToPcMode
-            val handleDuplicates = when (syncMode) {
-                SyncMode.COPY_AND_DELETE -> false  // Overwrite duplicates
-                SyncMode.MIRROR -> false           // Skip duplicates (handled by server)
-                SyncMode.SYNC -> true              // Handle duplicate names intelligently
-            }
+            // Determine sync behavior based on sync options
+            val handleDuplicates = folder.moveDuplicatesToFolder
+            val skipExisting = folder.skipExistingFiles
+            val deleteAfterTransfer = folder.deleteAfterTransfer
             
             val multipartBody = okhttp3.MultipartBody.Builder()
                 .setType(okhttp3.MultipartBody.FORM)
@@ -589,7 +592,8 @@ suspend fun uploadFileToServer(context: Context, serverUrl: String, folder: Sync
                 .addFormDataPart("original_filename", fullFilePath) // Include relative path
                 .addFormDataPart("folder_path", folder.pcPath)
                 .addFormDataPart("handle_duplicates", handleDuplicates.toString())
-                .addFormDataPart("sync_mode", syncMode.name)
+                .addFormDataPart("skip_existing", skipExisting.toString())
+                .addFormDataPart("delete_after_transfer", deleteAfterTransfer.toString())
                 .addFormDataPart("file_size", fileSize.toString())
                 .build()
             
@@ -708,5 +712,97 @@ suspend fun deleteFileFromAndroid(context: Context, file: AndroidFile) = withCon
         throw Exception("Permission denied to delete file")
     } catch (e: Exception) {
         throw Exception("Delete failed: ${e.message}")
+    }
+}
+
+suspend fun uploadFileWithRclone(context: Context, serverUrl: String, folder: SyncFolder, file: AndroidFile) = withContext(kotlinx.coroutines.Dispatchers.IO) {
+    try {
+        // Validate inputs
+        if (file.name.isBlank()) {
+            throw Exception("File name is empty")
+        }
+        
+        if (folder.pcPath.isBlank()) {
+            throw Exception("PC path is empty")
+        }
+        
+        // Create temporary file for rclone processing
+        val inputStream = context.contentResolver.openInputStream(file.uri)
+            ?: throw Exception("Cannot open file: ${file.name}")
+        
+        val tempFile = java.io.File(context.cacheDir, file.name.replace("/", "_"))
+        
+        try {
+            inputStream.use { input ->
+                java.io.FileOutputStream(tempFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+            
+            if (!tempFile.exists() || tempFile.length() == 0L) {
+                throw Exception("Failed to create temporary file or file is empty")
+            }
+            
+            // Create HTTP client for rclone API
+            val client = okhttp3.OkHttpClient.Builder()
+                .connectTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+                .writeTimeout(300, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(300, java.util.concurrent.TimeUnit.SECONDS)
+                .retryOnConnectionFailure(true)
+                .build()
+            
+            // Build the full file path including subdirectories
+            val fullFilePath = if (file.relativePath.isEmpty()) {
+                file.name
+            } else {
+                "${file.relativePath}/${file.name}"
+            }
+            
+            // Create request body from temp file
+            val requestBody = tempFile.asRequestBody("application/octet-stream".toMediaType())
+            
+            val multipartBody = okhttp3.MultipartBody.Builder()
+                .setType(okhttp3.MultipartBody.FORM)
+                .addFormDataPart("file", file.name, requestBody)
+                .addFormDataPart("original_filename", fullFilePath)
+                .addFormDataPart("folder_path", folder.pcPath)
+                .addFormDataPart("use_rclone", "true")
+                .addFormDataPart("rclone_flags", folder.rcloneFlags)
+                .addFormDataPart("sync_direction", folder.syncDirection.name)
+                .addFormDataPart("file_size", file.size.toString())
+                .build()
+            
+            val request = okhttp3.Request.Builder()
+                .url("$serverUrl/api/rclone-sync")
+                .post(multipartBody)
+                .addHeader("Connection", "keep-alive")
+                .build()
+            
+            // Execute request
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    val errorBody = response.body?.string() ?: "Unknown rclone error"
+                    throw Exception("Rclone sync error: HTTP ${response.code} - $errorBody")
+                }
+                
+                android.util.Log.i("FolderSync", "Successfully synced with rclone: ${file.name}")
+            }
+            
+        } finally {
+            // Clean up temp file
+            if (tempFile.exists()) {
+                tempFile.delete()
+            }
+        }
+        
+    } catch (e: java.net.SocketTimeoutException) {
+        throw Exception("${file.name}: Rclone sync timeout")
+    } catch (e: java.net.UnknownHostException) {
+        throw Exception("${file.name}: Cannot reach rclone server")
+    } catch (e: java.io.IOException) {
+        throw Exception("${file.name}: Rclone network error - ${e.message}")
+    } catch (e: Exception) {
+        val errorMsg = e.message ?: "Unknown rclone error occurred"
+        throw Exception("${file.name}: $errorMsg")
     }
 }

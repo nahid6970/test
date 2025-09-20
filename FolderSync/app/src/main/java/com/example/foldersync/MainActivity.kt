@@ -306,14 +306,34 @@ fun SyncFolderCard(
                         color = MaterialTheme.colorScheme.primary
                     )
                     
-                    // Show sync modes in a compact format
-                    val syncModeText = when(folder.syncDirection) {
-                        SyncDirection.ANDROID_TO_PC -> "📱→💻 ${folder.androidToPcMode.name.replace("_", " ").lowercase()}"
-                        SyncDirection.PC_TO_ANDROID -> "💻→📱 ${folder.pcToAndroidMode.name.replace("_", " ").lowercase()}"
+                    // Show sync options in a compact format
+                    val syncOptionsText = if (folder.useRclone) {
+                        val directionIcon = when(folder.syncDirection) {
+                            SyncDirection.ANDROID_TO_PC -> "📱→💻"
+                            SyncDirection.PC_TO_ANDROID -> "💻→📱"
+                        }
+                        "$directionIcon 🚀 Rclone: ${folder.rcloneFlags.take(30)}${if (folder.rcloneFlags.length > 30) "..." else ""}"
+                    } else {
+                        when(folder.syncDirection) {
+                            SyncDirection.ANDROID_TO_PC -> {
+                                val options = mutableListOf<String>()
+                                if (folder.deleteAfterTransfer) options.add("Delete after transfer")
+                                if (folder.moveDuplicatesToFolder) options.add("Move duplicates")
+                                if (folder.skipExistingFiles) options.add("Skip existing")
+                                "📱→💻 ${options.joinToString(", ")}"
+                            }
+                            SyncDirection.PC_TO_ANDROID -> {
+                                val options = mutableListOf<String>()
+                                if (folder.pcToAndroidDeleteAfterTransfer) options.add("Delete after transfer")
+                                if (folder.pcToAndroidMoveDuplicatesToFolder) options.add("Move duplicates")
+                                if (folder.pcToAndroidSkipExistingFiles) options.add("Skip existing")
+                                "💻→📱 ${options.joinToString(", ")}"
+                            }
+                        }
                     }
                     
                     Text(
-                        text = syncModeText,
+                        text = syncOptionsText,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -531,15 +551,16 @@ fun AdvancedSettingsDialog(
     onSave: (SyncFolder) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var androidToPcMode by remember { mutableStateOf(folder.androidToPcMode) }
-    var pcToAndroidMode by remember { mutableStateOf(folder.pcToAndroidMode) }
+    // State for rclone options
+    var useRclone by remember { mutableStateOf(folder.useRclone) }
+    var rcloneFlags by remember { mutableStateOf(folder.rcloneFlags) }
     
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Advanced Sync Settings") },
         text = {
             Column(
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
                     text = "Folder: ${folder.name}",
@@ -547,74 +568,49 @@ fun AdvancedSettingsDialog(
                     color = MaterialTheme.colorScheme.primary
                 )
                 
-                Text(
-                    text = "Direction: ${when(folder.syncDirection) {
-                        SyncDirection.ANDROID_TO_PC -> "Android to PC"
-                        SyncDirection.PC_TO_ANDROID -> "PC to Android"
-                    }}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                // Rclone Integration Toggle
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Switch(
+                        checked = useRclone,
+                        onCheckedChange = { useRclone = it }
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "🚀 Use Rclone",
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Advanced sync engine with extensive options",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
                 
-                // Show sync mode options based on folder's sync direction
-                when (folder.syncDirection) {
-                    SyncDirection.ANDROID_TO_PC -> {
-                        Text("📱→💻 Android to PC Mode:", fontWeight = FontWeight.Bold)
-                        SyncMode.values().forEach { mode ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                RadioButton(
-                                    selected = androidToPcMode == mode,
-                                    onClick = { androidToPcMode = mode }
-                                )
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = mode.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() },
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = when (mode) {
-                                            SyncMode.COPY_AND_DELETE -> "Move files after successful sync"
-                                            SyncMode.MIRROR -> "Compare files, skip duplicates"
-                                            SyncMode.SYNC -> "Handle duplicate names intelligently"
-                                        },
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    SyncDirection.PC_TO_ANDROID -> {
-                        Text("💻→📱 PC to Android Mode:", fontWeight = FontWeight.Bold)
-                        SyncMode.values().forEach { mode ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                RadioButton(
-                                    selected = pcToAndroidMode == mode,
-                                    onClick = { pcToAndroidMode = mode }
-                                )
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = mode.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() },
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = when (mode) {
-                                            SyncMode.COPY_AND_DELETE -> "Move files after successful sync"
-                                            SyncMode.MIRROR -> "Compare files, skip duplicates"
-                                            SyncMode.SYNC -> "Handle duplicate names intelligently"
-                                        },
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    }
+                if (useRclone) {
+                    OutlinedTextField(
+                        value = rcloneFlags,
+                        onValueChange = { rcloneFlags = it },
+                        label = { Text("Rclone Flags") },
+                        placeholder = { Text("--progress --transfers=4") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2
+                    )
+                    Text(
+                        text = "💡 Common: --progress, --transfers=N, --delete-after, --update",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Text(
+                        text = "📋 Using legacy sync method",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         },
@@ -622,8 +618,8 @@ fun AdvancedSettingsDialog(
             TextButton(
                 onClick = {
                     val updatedFolder = folder.copy(
-                        androidToPcMode = androidToPcMode,
-                        pcToAndroidMode = pcToAndroidMode
+                        useRclone = useRclone,
+                        rcloneFlags = rcloneFlags
                     )
                     onSave(updatedFolder)
                 }

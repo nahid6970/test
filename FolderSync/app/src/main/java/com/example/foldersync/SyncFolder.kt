@@ -11,8 +11,17 @@ data class SyncFolder(
     val isEnabled: Boolean = true,
     val lastSyncTime: Long = 0L,
     val syncDirection: SyncDirection = SyncDirection.ANDROID_TO_PC,
-    val androidToPcMode: SyncMode = SyncMode.COPY_AND_DELETE,
-    val pcToAndroidMode: SyncMode = SyncMode.COPY_AND_DELETE
+    // Rclone integration
+    val useRclone: Boolean = false,
+    val rcloneFlags: String = "--progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3",
+    // Legacy sync options (kept for backward compatibility)
+    val deleteAfterTransfer: Boolean = false,
+    val moveDuplicatesToFolder: Boolean = true,
+    val skipExistingFiles: Boolean = true,
+    // PC to Android sync options
+    val pcToAndroidDeleteAfterTransfer: Boolean = false,
+    val pcToAndroidMoveDuplicatesToFolder: Boolean = true,
+    val pcToAndroidSkipExistingFiles: Boolean = true
 ) {
     // Helper property to get Uri from String
     val androidUri: Uri?
@@ -24,11 +33,7 @@ enum class SyncDirection {
     PC_TO_ANDROID
 }
 
-enum class SyncMode {
-    COPY_AND_DELETE,  // Move files after successful sync
-    MIRROR,           // Compare files, don't copy duplicates
-    SYNC              // Like mirror but handle duplicate names differently
-}
+
 
 data class SyncStatus(
     val folderId: String,

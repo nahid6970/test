@@ -1,0 +1,20 @@
+2025-09-20 12:44:43,339 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5016
+ * Running on http://192.168.0.101:5016
+2025-09-20 12:44:43,381 - INFO - [33mPress CTRL+C to quit[0m
+2025-09-20 12:46:05,018 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5016
+ * Running on http://192.168.0.101:5016
+2025-09-20 12:46:05,019 - INFO - [33mPress CTRL+C to quit[0m
+2025-09-20 12:47:04,917 - INFO - Rclone is available and enabled
+2025-09-20 12:47:04,918 - INFO - Starting FolderSync Server
+2025-09-20 12:47:04,918 - INFO - Upload folder: C:\Users\nahid/Desktop/SyncFolders
+2025-09-20 12:47:04,918 - INFO - Server: http://0.0.0.0:5016
+2025-09-20 12:47:04,918 - INFO - Rclone: Enabled
+2025-09-20 12:47:06,184 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5016
+ * Running on http://192.168.0.101:5016
+2025-09-20 12:47:06,185 - INFO - [33mPress CTRL+C to quit[0m
