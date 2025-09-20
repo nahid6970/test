@@ -213,16 +213,34 @@ def upload_file():
         
         # Resolve target directory (handles both absolute and relative paths)
         target_dir = resolve_target_directory(folder_path, CONFIG['UPLOAD_FOLDER'])
-        original_filename = sanitize_filename(original_filename)
         
-        # Handle subdirectories in filename
+        # Handle subdirectories in filename - DON'T sanitize the full path yet
         if '/' in original_filename:
+            # Split path and filename
             subdir_path = os.path.dirname(original_filename)
             filename_only = os.path.basename(original_filename)
-            target_dir = os.path.join(target_dir, subdir_path)
-            target_filename = filename_only
+            
+            # Sanitize each directory component separately to preserve structure
+            safe_subdir_parts = []
+            for part in subdir_path.split('/'):
+                if part:  # Skip empty parts
+                    safe_part = secure_filename(part)
+                    if safe_part:  # Only add non-empty sanitized parts
+                        safe_subdir_parts.append(safe_part)
+            
+            # Build the subdirectory path
+            if safe_subdir_parts:
+                safe_subdir_path = os.path.join(*safe_subdir_parts)
+                target_dir = os.path.join(target_dir, safe_subdir_path)
+                logger.info(f"Creating subdirectory structure: {safe_subdir_path}")
+            
+            # Sanitize only the filename
+            target_filename = sanitize_filename(filename_only)
+            logger.info(f"File will be saved as: {target_dir}/{target_filename}")
         else:
-            target_filename = original_filename
+            # No subdirectories, just sanitize the filename
+            target_filename = sanitize_filename(original_filename)
+            logger.info(f"File will be saved as: {target_dir}/{target_filename}")
         
         os.makedirs(target_dir, exist_ok=True)
         
@@ -305,21 +323,35 @@ def rclone_sync():
         
         # Resolve target directory (handles both absolute and relative paths)
         target_dir = resolve_target_directory(folder_path, CONFIG['UPLOAD_FOLDER'])
-        original_filename = sanitize_filename(original_filename)
         
         # Create source directory structure
         source_base = os.path.join(CONFIG['UPLOAD_FOLDER'], 'rclone_temp')
         os.makedirs(source_base, exist_ok=True)
         
-        # Handle subdirectories in filename
+        # Handle subdirectories in filename - preserve directory structure
         if '/' in original_filename:
+            # Split path and filename
             subdir_path = os.path.dirname(original_filename)
             filename_only = os.path.basename(original_filename)
-            source_dir = os.path.join(source_base, subdir_path)
-            os.makedirs(source_dir, exist_ok=True)
-            source_path = os.path.join(source_dir, filename_only)
+            
+            # Sanitize each directory component separately
+            safe_subdir_parts = []
+            for part in subdir_path.split('/'):
+                if part:  # Skip empty parts
+                    safe_part = secure_filename(part)
+                    if safe_part:  # Only add non-empty sanitized parts
+                        safe_subdir_parts.append(safe_part)
+            
+            # Build the source subdirectory path
+            if safe_subdir_parts:
+                safe_subdir_path = os.path.join(*safe_subdir_parts)
+                source_dir = os.path.join(source_base, safe_subdir_path)
+                os.makedirs(source_dir, exist_ok=True)
+                source_path = os.path.join(source_dir, sanitize_filename(filename_only))
+            else:
+                source_path = os.path.join(source_base, sanitize_filename(filename_only))
         else:
-            source_path = os.path.join(source_base, original_filename)
+            source_path = os.path.join(source_base, sanitize_filename(original_filename))
         
         # Save uploaded file to temporary location
         file.save(source_path)
@@ -468,6 +500,57 @@ def get_config():
         'rclone_available': is_rclone_available(),
         'rclone_timeout': CONFIG['RCLONE_TIMEOUT']
     })
+
+@app.route('/api/test-path', methods=['POST'])
+def test_path_handling():
+    """Test endpoint to verify path handling logic"""
+    try:
+        folder_path = request.form.get('folder_path', 'test')
+        original_filename = request.form.get('original_filename', 'test.txt')
+        
+        # Test the path resolution logic
+        target_dir = resolve_target_directory(folder_path, CONFIG['UPLOAD_FOLDER'])
+        
+        # Test subdirectory handling
+        if '/' in original_filename:
+            subdir_path = os.path.dirname(original_filename)
+            filename_only = os.path.basename(original_filename)
+            
+            safe_subdir_parts = []
+            for part in subdir_path.split('/'):
+                if part:
+                    safe_part = secure_filename(part)
+                    if safe_part:
+                        safe_subdir_parts.append(safe_part)
+            
+            if safe_subdir_parts:
+                safe_subdir_path = os.path.join(*safe_subdir_parts)
+                final_target_dir = os.path.join(target_dir, safe_subdir_path)
+            else:
+                final_target_dir = target_dir
+            
+            target_filename = sanitize_filename(filename_only)
+        else:
+            final_target_dir = target_dir
+            target_filename = sanitize_filename(original_filename)
+        
+        final_path = os.path.join(final_target_dir, target_filename)
+        
+        return jsonify({
+            'input': {
+                'folder_path': folder_path,
+                'original_filename': original_filename
+            },
+            'resolved': {
+                'target_dir': target_dir,
+                'final_target_dir': final_target_dir,
+                'target_filename': target_filename,
+                'final_path': final_path
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/rclone-remotes', methods=['GET'])
 def list_rclone_remotes():

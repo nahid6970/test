@@ -66,3 +66,260 @@
 2025-09-20 12:58:13,323 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
 2025-09-20 12:58:13,700 - INFO - Rclone sync completed successfully: Selected_Job_Circular_-_June_2025.pdf
 2025-09-20 12:58:13,736 - INFO - 192.168.0.101 - - [20/Sep/2025 12:58:13] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:00:47,932 - INFO - Rclone sync: tttttttt/HyperCeiler_settings_backup_2025-05-12-18_46_45.json -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:00:47,932 - INFO - Using absolute path: C:\Test
+2025-09-20 13:00:47,934 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:00:48,087 - INFO - Rclone sync completed successfully: tttttttt_HyperCeiler_settings_backup_2025-05-12-18_46_45.json
+2025-09-20 13:00:48,087 - INFO - 192.168.0.101 - - [20/Sep/2025 13:00:48] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:01:18,447 - INFO - Rclone sync: tttttttt/LMC8.4-R16-Google-Lens.apk -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:18,447 - INFO - Using absolute path: C:\Test
+2025-09-20 13:01:19,042 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:20,004 - INFO - Rclone sync completed successfully: tttttttt_LMC8.4-R16-Google-Lens.apk
+2025-09-20 13:01:20,033 - INFO - 192.168.0.101 - - [20/Sep/2025 13:01:20] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:01:20,989 - INFO - Rclone sync: tttttttt/LSPosed-v1.10.1-7115-zygisk-release.zip -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:20,989 - INFO - Using absolute path: C:\Test
+2025-09-20 13:01:20,994 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:21,190 - INFO - Rclone sync completed successfully: tttttttt_LSPosed-v1.10.1-7115-zygisk-release.zip
+2025-09-20 13:01:21,192 - INFO - 192.168.0.101 - - [20/Sep/2025 13:01:21] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:01:25,109 - INFO - Rclone sync: tttttttt/RO2RW.zip -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:25,109 - INFO - Using absolute path: C:\Test
+2025-09-20 13:01:25,135 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:25,364 - INFO - Rclone sync completed successfully: tttttttt_RO2RW.zip
+2025-09-20 13:01:25,366 - INFO - 192.168.0.101 - - [20/Sep/2025 13:01:25] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:01:25,802 - INFO - Rclone sync: tttttttt/Xposed_edge_pro-v8.0.1_build_82.apk -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:25,802 - INFO - Using absolute path: C:\Test
+2025-09-20 13:01:25,805 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:25,977 - INFO - Rclone sync completed successfully: tttttttt_Xposed_edge_pro-v8.0.1_build_82.apk
+2025-09-20 13:01:25,977 - INFO - 192.168.0.101 - - [20/Sep/2025 13:01:25] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:01:26,342 - INFO - Rclone sync: tttttttt/com-jozein-xedge-82-63392207-2701a4695f6b1a501c66d08459f6db18.apk -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:26,342 - INFO - Using absolute path: C:\Test
+2025-09-20 13:01:26,346 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:26,507 - INFO - Rclone sync completed successfully: tttttttt_com-jozein-xedge-82-63392207-2701a4695f6b1a501c66d08459f6db18.apk
+2025-09-20 13:01:26,508 - INFO - 192.168.0.101 - - [20/Sep/2025 13:01:26] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:01:26,908 - INFO - Rclone sync: tttttttt/com-jozein-xedgepro-61.apk -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:26,908 - INFO - Using absolute path: C:\Test
+2025-09-20 13:01:26,911 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:27,079 - INFO - Rclone sync completed successfully: tttttttt_com-jozein-xedgepro-61.apk
+2025-09-20 13:01:27,080 - INFO - 192.168.0.101 - - [20/Sep/2025 13:01:27] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:01:27,385 - INFO - Rclone sync: tttttttt/generate_admit_10220_pdf.php.pdf -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:27,385 - INFO - Using absolute path: C:\Test
+2025-09-20 13:01:27,387 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:27,689 - INFO - Rclone sync completed successfully: tttttttt_generate_admit_10220_pdf.php.pdf
+2025-09-20 13:01:27,689 - INFO - 192.168.0.101 - - [20/Sep/2025 13:01:27] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:01:28,049 - INFO - Rclone sync: tttttttt/generate_dplctadmit_10202_pdf.pdf -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:28,049 - INFO - Using absolute path: C:\Test
+2025-09-20 13:01:28,051 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:28,339 - INFO - Rclone sync completed successfully: tttttttt_generate_dplctadmit_10202_pdf.pdf
+2025-09-20 13:01:28,340 - INFO - 192.168.0.101 - - [20/Sep/2025 13:01:28] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:01:31,367 - INFO - Rclone sync: tttttttt/magisk.apk -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:31,367 - INFO - Using absolute path: C:\Test
+2025-09-20 13:01:31,392 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:31,570 - INFO - Rclone sync completed successfully: tttttttt_magisk.apk
+2025-09-20 13:01:31,572 - INFO - 192.168.0.101 - - [20/Sep/2025 13:01:31] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:01:34,352 - INFO - Rclone sync: tttttttt/magisk281.zip -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:34,353 - INFO - Using absolute path: C:\Test
+2025-09-20 13:01:34,380 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:34,574 - INFO - Rclone sync completed successfully: tttttttt_magisk281.zip
+2025-09-20 13:01:34,575 - INFO - 192.168.0.101 - - [20/Sep/2025 13:01:34] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:01:35,057 - INFO - Rclone sync: tttttttt/rclone.conf -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:35,057 - INFO - Using absolute path: C:\Test
+2025-09-20 13:01:35,059 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:35,241 - INFO - Rclone sync completed successfully: tttttttt_rclone.conf
+2025-09-20 13:01:35,241 - INFO - 192.168.0.101 - - [20/Sep/2025 13:01:35] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:01:35,655 - INFO - Rclone sync: tttttttt/statusbar_gestures.dat -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:35,655 - INFO - Using absolute path: C:\Test
+2025-09-20 13:01:35,657 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:35,828 - INFO - Rclone sync completed successfully: tttttttt_statusbar_gestures.dat
+2025-09-20 13:01:35,829 - INFO - 192.168.0.101 - - [20/Sep/2025 13:01:35] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:01:36,307 - INFO - Rclone sync: tttttttt/test.py -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:36,308 - INFO - Using absolute path: C:\Test
+2025-09-20 13:01:36,311 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:36,497 - INFO - Rclone sync completed successfully: tttttttt_test.py
+2025-09-20 13:01:36,499 - INFO - 192.168.0.101 - - [20/Sep/2025 13:01:36] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:01:36,851 - INFO - Rclone sync: tttttttt/tmx.py -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:36,851 - INFO - Using absolute path: C:\Test
+2025-09-20 13:01:36,852 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:37,062 - INFO - Rclone sync completed successfully: tttttttt_tmx.py
+2025-09-20 13:01:37,063 - INFO - 192.168.0.101 - - [20/Sep/2025 13:01:37] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:01:37,717 - INFO - Rclone sync: tttttttt/xposededge81.apk -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:37,718 - INFO - Using absolute path: C:\Test
+2025-09-20 13:01:37,721 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:01:37,887 - INFO - Rclone sync completed successfully: tttttttt_xposededge81.apk
+2025-09-20 13:01:37,889 - INFO - 192.168.0.101 - - [20/Sep/2025 13:01:37] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:02:40,242 - INFO - Rclone sync: tttttttt/HyperCeiler_settings_backup_2025-05-12-18_46_45.json -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:02:40,242 - INFO - Using absolute path: C:\Test
+2025-09-20 13:02:40,245 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:02:40,395 - INFO - Rclone sync completed successfully: tttttttt_HyperCeiler_settings_backup_2025-05-12-18_46_45.json
+2025-09-20 13:02:40,395 - INFO - 192.168.0.101 - - [20/Sep/2025 13:02:40] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:02:52,203 - ERROR - Rclone sync error: 400 Bad Request: The browser (or proxy) sent a request that this server could not understand.
+2025-09-20 13:02:52,210 - INFO - 192.168.0.101 - - [20/Sep/2025 13:02:52] "[35m[1mPOST /api/rclone-sync HTTP/1.1[0m" 500 -
+2025-09-20 13:03:27,669 - INFO - Rclone sync: tttttttt/RO2RW.zip -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:03:27,669 - INFO - Using absolute path: C:\Test
+2025-09-20 13:03:27,699 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:03:27,922 - INFO - Rclone sync completed successfully: tttttttt_RO2RW.zip
+2025-09-20 13:03:27,924 - INFO - 192.168.0.101 - - [20/Sep/2025 13:03:27] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:03:29,751 - INFO - Rclone sync: tttttttt/HyperCeiler_settings_backup_2025-05-12-18_46_45.json -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:03:29,751 - INFO - Using absolute path: C:\Test
+2025-09-20 13:03:29,753 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:03:29,921 - INFO - Rclone sync completed successfully: tttttttt_HyperCeiler_settings_backup_2025-05-12-18_46_45.json
+2025-09-20 13:03:29,922 - INFO - 192.168.0.101 - - [20/Sep/2025 13:03:29] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:04:00,750 - INFO - Rclone sync: tttttttt/LMC8.4-R16-Google-Lens.apk -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:00,750 - INFO - Using absolute path: C:\Test
+2025-09-20 13:04:01,953 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:02,987 - INFO - Rclone sync completed successfully: tttttttt_LMC8.4-R16-Google-Lens.apk
+2025-09-20 13:04:03,001 - INFO - 192.168.0.101 - - [20/Sep/2025 13:04:03] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:04:03,927 - INFO - Rclone sync: tttttttt/LSPosed-v1.10.1-7115-zygisk-release.zip -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:03,927 - INFO - Using absolute path: C:\Test
+2025-09-20 13:04:03,933 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:04,280 - INFO - Rclone sync completed successfully: tttttttt_LSPosed-v1.10.1-7115-zygisk-release.zip
+2025-09-20 13:04:04,280 - INFO - 192.168.0.101 - - [20/Sep/2025 13:04:04] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:04:08,058 - INFO - Rclone sync: tttttttt/RO2RW.zip -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:08,059 - INFO - Using absolute path: C:\Test
+2025-09-20 13:04:08,091 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:08,294 - INFO - Rclone sync completed successfully: tttttttt_RO2RW.zip
+2025-09-20 13:04:08,296 - INFO - 192.168.0.101 - - [20/Sep/2025 13:04:08] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:04:08,820 - INFO - Rclone sync: tttttttt/Xposed_edge_pro-v8.0.1_build_82.apk -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:08,820 - INFO - Using absolute path: C:\Test
+2025-09-20 13:04:08,824 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:09,034 - INFO - Rclone sync completed successfully: tttttttt_Xposed_edge_pro-v8.0.1_build_82.apk
+2025-09-20 13:04:09,035 - INFO - 192.168.0.101 - - [20/Sep/2025 13:04:09] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:04:09,376 - INFO - Rclone sync: tttttttt/com-jozein-xedge-82-63392207-2701a4695f6b1a501c66d08459f6db18.apk -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:09,376 - INFO - Using absolute path: C:\Test
+2025-09-20 13:04:09,391 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:09,577 - INFO - Rclone sync completed successfully: tttttttt_com-jozein-xedge-82-63392207-2701a4695f6b1a501c66d08459f6db18.apk
+2025-09-20 13:04:09,578 - INFO - 192.168.0.101 - - [20/Sep/2025 13:04:09] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:04:11,160 - INFO - Rclone sync: tttttttt/com-jozein-xedgepro-61.apk -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:11,160 - INFO - Using absolute path: C:\Test
+2025-09-20 13:04:11,164 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:11,322 - INFO - Rclone sync completed successfully: tttttttt_com-jozein-xedgepro-61.apk
+2025-09-20 13:04:11,322 - INFO - 192.168.0.101 - - [20/Sep/2025 13:04:11] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:04:11,645 - INFO - Rclone sync: tttttttt/generate_admit_10220_pdf.php.pdf -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:11,645 - INFO - Using absolute path: C:\Test
+2025-09-20 13:04:11,646 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:11,804 - INFO - Rclone sync completed successfully: tttttttt_generate_admit_10220_pdf.php.pdf
+2025-09-20 13:04:11,805 - INFO - 192.168.0.101 - - [20/Sep/2025 13:04:11] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:04:12,336 - INFO - Rclone sync: tttttttt/generate_dplctadmit_10202_pdf.pdf -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:12,336 - INFO - Using absolute path: C:\Test
+2025-09-20 13:04:12,338 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:12,520 - INFO - Rclone sync completed successfully: tttttttt_generate_dplctadmit_10202_pdf.pdf
+2025-09-20 13:04:12,521 - INFO - 192.168.0.101 - - [20/Sep/2025 13:04:12] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:04:15,239 - INFO - Rclone sync: tttttttt/magisk.apk -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:15,239 - INFO - Using absolute path: C:\Test
+2025-09-20 13:04:15,262 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:15,450 - INFO - Rclone sync completed successfully: tttttttt_magisk.apk
+2025-09-20 13:04:15,452 - INFO - 192.168.0.101 - - [20/Sep/2025 13:04:15] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:04:18,356 - INFO - Rclone sync: tttttttt/magisk281.zip -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:18,356 - INFO - Using absolute path: C:\Test
+2025-09-20 13:04:18,376 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:18,582 - INFO - Rclone sync completed successfully: tttttttt_magisk281.zip
+2025-09-20 13:04:18,584 - INFO - 192.168.0.101 - - [20/Sep/2025 13:04:18] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:04:18,904 - INFO - Rclone sync: tttttttt/statusbar_gestures.dat -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:18,904 - INFO - Using absolute path: C:\Test
+2025-09-20 13:04:18,907 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:19,054 - INFO - Rclone sync completed successfully: tttttttt_statusbar_gestures.dat
+2025-09-20 13:04:19,056 - INFO - 192.168.0.101 - - [20/Sep/2025 13:04:19] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:04:19,448 - INFO - Rclone sync: tttttttt/test.py -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:19,448 - INFO - Using absolute path: C:\Test
+2025-09-20 13:04:19,450 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:19,610 - INFO - Rclone sync completed successfully: tttttttt_test.py
+2025-09-20 13:04:19,611 - INFO - 192.168.0.101 - - [20/Sep/2025 13:04:19] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:04:19,971 - INFO - Rclone sync: tttttttt/tmx.py -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:19,971 - INFO - Using absolute path: C:\Test
+2025-09-20 13:04:19,973 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:20,143 - INFO - Rclone sync completed successfully: tttttttt_tmx.py
+2025-09-20 13:04:20,144 - INFO - 192.168.0.101 - - [20/Sep/2025 13:04:20] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:04:20,687 - INFO - Rclone sync: tttttttt/xposededge81.apk -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:20,688 - INFO - Using absolute path: C:\Test
+2025-09-20 13:04:20,691 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:04:20,856 - INFO - Rclone sync completed successfully: tttttttt_xposededge81.apk
+2025-09-20 13:04:20,857 - INFO - 192.168.0.101 - - [20/Sep/2025 13:04:20] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:06:15,121 - INFO - Rclone is available and enabled
+2025-09-20 13:06:15,122 - INFO - Starting FolderSync Server
+2025-09-20 13:06:15,122 - INFO - Upload folder: C:\Users\nahid/Desktop/SyncFolders
+2025-09-20 13:06:15,122 - INFO - Server: http://0.0.0.0:5016
+2025-09-20 13:06:15,122 - INFO - Rclone: Enabled
+2025-09-20 13:06:16,423 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5016
+ * Running on http://192.168.0.101:5016
+2025-09-20 13:06:16,423 - INFO - [33mPress CTRL+C to quit[0m
+2025-09-20 13:06:19,714 - INFO - Rclone sync: tttttttt/HyperCeiler_settings_backup_2025-05-12-18_46_45.json -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:06:19,714 - INFO - Using absolute path: C:\Test
+2025-09-20 13:06:19,715 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:06:19,871 - INFO - Rclone sync completed successfully: tttttttt_HyperCeiler_settings_backup_2025-05-12-18_46_45.json
+2025-09-20 13:06:19,872 - INFO - 192.168.0.101 - - [20/Sep/2025 13:06:19] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:06:51,833 - INFO - Rclone sync: tttttttt/LMC8.4-R16-Google-Lens.apk -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:06:51,833 - INFO - Using absolute path: C:\Test
+2025-09-20 13:06:52,074 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:06:52,505 - INFO - Rclone sync completed successfully: tttttttt_LMC8.4-R16-Google-Lens.apk
+2025-09-20 13:06:52,526 - INFO - 192.168.0.101 - - [20/Sep/2025 13:06:52] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:06:53,530 - INFO - Rclone sync: tttttttt/LSPosed-v1.10.1-7115-zygisk-release.zip -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:06:53,530 - INFO - Using absolute path: C:\Test
+2025-09-20 13:06:53,536 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:06:53,699 - INFO - Rclone sync completed successfully: tttttttt_LSPosed-v1.10.1-7115-zygisk-release.zip
+2025-09-20 13:06:53,701 - INFO - 192.168.0.101 - - [20/Sep/2025 13:06:53] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:06:57,904 - INFO - Rclone sync: tttttttt/RO2RW.zip -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:06:57,905 - INFO - Using absolute path: C:\Test
+2025-09-20 13:06:57,930 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:06:58,219 - INFO - Rclone sync completed successfully: tttttttt_RO2RW.zip
+2025-09-20 13:06:58,221 - INFO - 192.168.0.101 - - [20/Sep/2025 13:06:58] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:06:58,682 - INFO - Rclone sync: tttttttt/Xposed_edge_pro-v8.0.1_build_82.apk -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:06:58,682 - INFO - Using absolute path: C:\Test
+2025-09-20 13:06:58,686 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:06:58,852 - INFO - Rclone sync completed successfully: tttttttt_Xposed_edge_pro-v8.0.1_build_82.apk
+2025-09-20 13:06:58,853 - INFO - 192.168.0.101 - - [20/Sep/2025 13:06:58] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:06:59,257 - INFO - Rclone sync: tttttttt/com-jozein-xedge-82-63392207-2701a4695f6b1a501c66d08459f6db18.apk -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:06:59,257 - INFO - Using absolute path: C:\Test
+2025-09-20 13:06:59,261 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:06:59,432 - INFO - Rclone sync completed successfully: tttttttt_com-jozein-xedge-82-63392207-2701a4695f6b1a501c66d08459f6db18.apk
+2025-09-20 13:06:59,433 - INFO - 192.168.0.101 - - [20/Sep/2025 13:06:59] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:06:59,800 - INFO - Rclone sync: tttttttt/com-jozein-xedgepro-61.apk -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:06:59,801 - INFO - Using absolute path: C:\Test
+2025-09-20 13:06:59,804 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:06:59,963 - INFO - Rclone sync completed successfully: tttttttt_com-jozein-xedgepro-61.apk
+2025-09-20 13:06:59,964 - INFO - 192.168.0.101 - - [20/Sep/2025 13:06:59] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:07:00,262 - INFO - Rclone sync: tttttttt/generate_admit_10220_pdf.php.pdf -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:07:00,262 - INFO - Using absolute path: C:\Test
+2025-09-20 13:07:00,264 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:07:00,428 - INFO - Rclone sync completed successfully: tttttttt_generate_admit_10220_pdf.php.pdf
+2025-09-20 13:07:00,428 - INFO - 192.168.0.101 - - [20/Sep/2025 13:07:00] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:07:00,876 - INFO - Rclone sync: tttttttt/generate_dplctadmit_10202_pdf.pdf -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:07:00,876 - INFO - Using absolute path: C:\Test
+2025-09-20 13:07:00,879 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:07:01,170 - INFO - Rclone sync completed successfully: tttttttt_generate_dplctadmit_10202_pdf.pdf
+2025-09-20 13:07:01,172 - INFO - 192.168.0.101 - - [20/Sep/2025 13:07:01] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:07:04,326 - INFO - Rclone sync: tttttttt/magisk.apk -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:07:04,326 - INFO - Using absolute path: C:\Test
+2025-09-20 13:07:04,348 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:07:04,536 - INFO - Rclone sync completed successfully: tttttttt_magisk.apk
+2025-09-20 13:07:04,538 - INFO - 192.168.0.101 - - [20/Sep/2025 13:07:04] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:07:07,450 - INFO - Rclone sync: tttttttt/magisk281.zip -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:07:07,450 - INFO - Using absolute path: C:\Test
+2025-09-20 13:07:07,474 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:07:07,690 - INFO - Rclone sync completed successfully: tttttttt_magisk281.zip
+2025-09-20 13:07:07,693 - INFO - 192.168.0.101 - - [20/Sep/2025 13:07:07] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:07:08,044 - INFO - Rclone sync: tttttttt/sk/generate_admit_10220_pdf.php.pdf -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:07:08,044 - INFO - Using absolute path: C:\Test
+2025-09-20 13:07:08,047 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:07:08,204 - INFO - Rclone sync completed successfully: tttttttt_sk_generate_admit_10220_pdf.php.pdf
+2025-09-20 13:07:08,205 - INFO - 192.168.0.101 - - [20/Sep/2025 13:07:08] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:07:08,661 - INFO - Rclone sync: tttttttt/statusbar_gestures.dat -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:07:08,661 - INFO - Using absolute path: C:\Test
+2025-09-20 13:07:08,662 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:07:08,846 - INFO - Rclone sync completed successfully: tttttttt_statusbar_gestures.dat
+2025-09-20 13:07:08,848 - INFO - 192.168.0.101 - - [20/Sep/2025 13:07:08] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:07:09,294 - INFO - Rclone sync: tttttttt/test.py -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:07:09,294 - INFO - Using absolute path: C:\Test
+2025-09-20 13:07:09,296 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:07:09,449 - INFO - Rclone sync completed successfully: tttttttt_test.py
+2025-09-20 13:07:09,449 - INFO - 192.168.0.101 - - [20/Sep/2025 13:07:09] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:07:09,860 - INFO - Rclone sync: tttttttt/tmx.py -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:07:09,860 - INFO - Using absolute path: C:\Test
+2025-09-20 13:07:09,862 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:07:10,033 - INFO - Rclone sync completed successfully: tttttttt_tmx.py
+2025-09-20 13:07:10,033 - INFO - 192.168.0.101 - - [20/Sep/2025 13:07:10] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 13:07:10,425 - INFO - Rclone sync: tttttttt/xposededge81.apk -> C:/Test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:07:10,425 - INFO - Using absolute path: C:\Test
+2025-09-20 13:07:10,428 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 13:07:10,592 - INFO - Rclone sync completed successfully: tttttttt_xposededge81.apk
+2025-09-20 13:07:10,593 - INFO - 192.168.0.101 - - [20/Sep/2025 13:07:10] "POST /api/rclone-sync HTTP/1.1" 200 -
