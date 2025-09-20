@@ -351,6 +351,11 @@ suspend fun startSync(
                     val deleteCount = filesToSync.count { it.action == SyncAction.DELETE }
                     android.util.Log.i("FolderSync", "📱→💻 Mirror sync plan: $uploadCount uploads, $deleteCount deletions")
                     
+                    // Debug: List all DELETE actions
+                    filesToSync.filter { it.action == SyncAction.DELETE }.forEach { deleteAction ->
+                        android.util.Log.d("FolderSync", "📱→💻 🗑️ DELETE planned: ${deleteAction.pcFile?.path}")
+                    }
+                    
                     if (filesToSync.isNotEmpty()) {
                         statuses[index] = statuses[index].copy(
                             status = SyncState.SYNCING,
@@ -360,10 +365,20 @@ suspend fun startSync(
                         onStatusUpdate(statuses.toList())
                         
                         filesToSync.forEachIndexed { fileIndex, fileToSync ->
-                            val displayName = if (fileToSync.androidFile!!.relativePath.isEmpty()) {
-                                fileToSync.androidFile.name
-                            } else {
-                                "${fileToSync.androidFile.relativePath}/${fileToSync.androidFile.name}"
+                            val displayName = when (fileToSync.action) {
+                                SyncAction.DELETE -> "🗑️ ${fileToSync.pcFile?.path ?: "unknown"}"
+                                else -> {
+                                    val androidFile = fileToSync.androidFile
+                                    if (androidFile != null) {
+                                        if (androidFile.relativePath.isEmpty()) {
+                                            androidFile.name
+                                        } else {
+                                            "${androidFile.relativePath}/${androidFile.name}"
+                                        }
+                                    } else {
+                                        "unknown file"
+                                    }
+                                }
                             }
                             
                             statuses[index] = statuses[index].copy(
@@ -376,17 +391,23 @@ suspend fun startSync(
                             try {
                                 when (fileToSync.action) {
                                     SyncAction.UPLOAD -> {
-                                        uploadFileToServer(context, serverUrl, folder, fileToSync.androidFile)
-                                        completedOperations++
-                                        
-                                        // Handle post-sync actions based on sync mode
-                                        if (folder.androidToPcMode == SyncMode.COPY_AND_DELETE) {
-                                            try {
-                                                deleteFileFromAndroid(context, fileToSync.androidFile)
-                                                android.util.Log.i("FolderSync", "Successfully uploaded and deleted: ${fileToSync.androidFile.name}")
-                                            } catch (e: Exception) {
-                                                android.util.Log.w("FolderSync", "Upload succeeded but failed to delete ${fileToSync.androidFile.name}: ${e.message}")
+                                        val androidFile = fileToSync.androidFile
+                                        if (androidFile != null) {
+                                            uploadFileToServer(context, serverUrl, folder, androidFile)
+                                            completedOperations++
+                                            
+                                            // Handle post-sync actions based on sync mode
+                                            if (folder.androidToPcMode == SyncMode.COPY_AND_DELETE) {
+                                                try {
+                                                    deleteFileFromAndroid(context, androidFile)
+                                                    android.util.Log.i("FolderSync", "Successfully uploaded and deleted: ${androidFile.name}")
+                                                } catch (e: Exception) {
+                                                    android.util.Log.w("FolderSync", "Upload succeeded but failed to delete ${androidFile.name}: ${e.message}")
+                                                }
                                             }
+                                        } else {
+                                            android.util.Log.e("FolderSync", "UPLOAD action but androidFile is null")
+                                            completedOperations++
                                         }
                                     }
                                     SyncAction.DELETE -> {
@@ -460,36 +481,50 @@ suspend fun startSync(
                             statuses[index] = statuses[index].copy(
                                 progress = completedOperations.toFloat() / totalOperations,
                                 filesProcessed = completedOperations,
-                                currentFile = "💻→📱 ${fileToSync.pcFile?.path ?: "unknown"}"
+                                currentFile = when (fileToSync.action) {
+                                    SyncAction.DELETE -> "💻→📱 🗑️ ${fileToSync.androidFile?.name ?: "unknown"}"
+                                    else -> "💻→📱 ${fileToSync.pcFile?.path ?: "unknown"}"
+                                }
                             )
                             onStatusUpdate(statuses.toList())
                             
                             try {
                                 when (fileToSync.action) {
                                     SyncAction.DOWNLOAD -> {
-                                        downloadFileFromServer(context, serverUrl, folder, fileToSync.pcFile!!)
-                                        completedOperations++
-                                        
-                                        // Handle post-sync actions based on sync mode
-                                        if (folder.pcToAndroidMode == SyncMode.COPY_AND_DELETE) {
-                                            try {
-                                                deleteFileFromServer(serverUrl, folder, fileToSync.pcFile)
-                                                android.util.Log.i("FolderSync", "Successfully downloaded and deleted: ${fileToSync.pcFile.path}")
-                                            } catch (e: Exception) {
-                                                android.util.Log.w("FolderSync", "Download succeeded but failed to delete ${fileToSync.pcFile.path}: ${e.message}")
+                                        val pcFile = fileToSync.pcFile
+                                        if (pcFile != null) {
+                                            downloadFileFromServer(context, serverUrl, folder, pcFile)
+                                            completedOperations++
+                                            
+                                            // Handle post-sync actions based on sync mode
+                                            if (folder.pcToAndroidMode == SyncMode.COPY_AND_DELETE) {
+                                                try {
+                                                    deleteFileFromServer(serverUrl, folder, pcFile)
+                                                    android.util.Log.i("FolderSync", "Successfully downloaded and deleted: ${pcFile.path}")
+                                                } catch (e: Exception) {
+                                                    android.util.Log.w("FolderSync", "Download succeeded but failed to delete ${pcFile.path}: ${e.message}")
+                                                }
                                             }
+                                        } else {
+                                            android.util.Log.e("FolderSync", "DOWNLOAD action but pcFile is null")
+                                            completedOperations++
                                         }
                                     }
                                     SyncAction.DELETE -> {
                                         try {
                                             // Delete file from Android
-                                            deleteFileFromAndroid(context, fileToSync.androidFile!!)
+                                            val androidFile = fileToSync.androidFile
+                                            if (androidFile != null) {
+                                                deleteFileFromAndroid(context, androidFile)
                                             completedOperations++
-                                            android.util.Log.i("FolderSync", "Successfully deleted from Android: ${fileToSync.androidFile.name}")
+                                                android.util.Log.i("FolderSync", "Successfully deleted from Android: ${androidFile.name}")
+                                            } else {
+                                                android.util.Log.e("FolderSync", "DELETE action but androidFile is null")
+                                            }
                                         } catch (deleteException: Exception) {
                                             failedOperations++
-                                            failedFiles.add("🗑️📱 ${fileToSync.androidFile!!.name}")
-                                            android.util.Log.e("FolderSync", "Delete failed for ${fileToSync.androidFile.name}: ${deleteException.message}")
+                                            failedFiles.add("🗑️📱 ${fileToSync.androidFile?.name ?: "unknown"}")
+                                            android.util.Log.e("FolderSync", "Delete failed for ${fileToSync.androidFile?.name ?: "unknown"}: ${deleteException.message}")
                                         }
                                     }
                                     else -> {
