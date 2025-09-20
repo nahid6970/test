@@ -200,47 +200,54 @@ def upload_file():
         if file_dir and file_dir != target_folder:
             os.makedirs(file_dir, exist_ok=True)
         
-        # Handle duplicate filenames based on user preference
-        if handle_duplicates and os.path.exists(file_path):
-            # Find the next available dup folder number
-            dup_counter = 1
-            while os.path.exists(os.path.join(target_folder, f"dup{dup_counter}")):
-                dup_counter += 1
-            
-            # Create the duplicate folder
-            dup_folder = os.path.join(target_folder, f"dup{dup_counter}")
-            os.makedirs(dup_folder, exist_ok=True)
-            
-            # Prepare file names
-            existing_file_name = os.path.basename(file_path)
-            base_name, extension = os.path.splitext(existing_file_name)
-            
-            # Move existing file to duplicate folder with "_existing" suffix
-            existing_new_name = f"{base_name}_existing{extension}"
-            existing_new_path = os.path.join(dup_folder, existing_new_name)
-            
-            try:
-                import shutil
-                shutil.move(file_path, existing_new_path)
-                print(f"📁 Moved existing file to: dup{dup_counter}/{existing_new_name}")
-            except Exception as e:
-                print(f"⚠️ Could not move existing file: {e}")
-            
-            # Set path for new file with "_new" suffix in the same duplicate folder
-            new_file_name = f"{base_name}_new{extension}"
-            file_path = os.path.join(dup_folder, new_file_name)
-            print(f"📁 Will save new file as: dup{dup_counter}/{new_file_name}")
-            
-        elif not handle_duplicates:
-            # Original behavior - add counter to filename
-            counter = 1
-            base_name, extension = os.path.splitext(safe_filename)
-            original_file_path = file_path
-            
-            while os.path.exists(file_path):
-                safe_filename = f"{base_name} ({counter}){extension}"
-                file_path = os.path.join(target_folder, safe_filename)
-                counter += 1
+        # Get sync mode to determine file handling behavior
+        sync_mode = request.form.get('sync_mode', 'COPY_AND_DELETE')
+        
+        # Handle existing files based on sync mode
+        if os.path.exists(file_path):
+            if sync_mode == 'MIRROR' or sync_mode == 'UPDATE':
+                # For Mirror/Update mode, overwrite existing files
+                print(f"🔄 Overwriting existing file: {safe_filename} (Mirror/Update mode)")
+            elif handle_duplicates:
+                # Find the next available dup folder number
+                dup_counter = 1
+                while os.path.exists(os.path.join(target_folder, f"dup{dup_counter}")):
+                    dup_counter += 1
+                
+                # Create the duplicate folder
+                dup_folder = os.path.join(target_folder, f"dup{dup_counter}")
+                os.makedirs(dup_folder, exist_ok=True)
+                
+                # Prepare file names
+                existing_file_name = os.path.basename(file_path)
+                base_name, extension = os.path.splitext(existing_file_name)
+                
+                # Move existing file to duplicate folder with "_existing" suffix
+                existing_new_name = f"{base_name}_existing{extension}"
+                existing_new_path = os.path.join(dup_folder, existing_new_name)
+                
+                try:
+                    import shutil
+                    shutil.move(file_path, existing_new_path)
+                    print(f"📁 Moved existing file to: dup{dup_counter}/{existing_new_name}")
+                except Exception as e:
+                    print(f"⚠️ Could not move existing file: {e}")
+                
+                # Set path for new file with "_new" suffix in the same duplicate folder
+                new_file_name = f"{base_name}_new{extension}"
+                file_path = os.path.join(dup_folder, new_file_name)
+                print(f"📁 Will save new file as: dup{dup_counter}/{new_file_name}")
+                
+            else:
+                # Add counter to filename
+                counter = 1
+                base_name, extension = os.path.splitext(safe_filename)
+                original_file_path = file_path
+                
+                while os.path.exists(file_path):
+                    safe_filename = f"{base_name} ({counter}){extension}"
+                    file_path = os.path.join(target_folder, safe_filename)
+                    counter += 1
         
         # Save file
         start_time = time.time()

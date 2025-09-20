@@ -348,8 +348,9 @@ suspend fun startSync(
                     }
                     
                     val uploadCount = filesToSync.count { it.action == SyncAction.UPLOAD }
+                    val updateCount = filesToSync.count { it.action == SyncAction.UPDATE }
                     val deleteCount = filesToSync.count { it.action == SyncAction.DELETE }
-                    android.util.Log.i("FolderSync", "📱→💻 Mirror sync plan: $uploadCount uploads, $deleteCount deletions")
+                    android.util.Log.i("FolderSync", "📱→💻 Mirror sync plan: $uploadCount uploads, $updateCount updates, $deleteCount deletions")
                     
                     // Debug: List all DELETE actions
                     filesToSync.filter { it.action == SyncAction.DELETE }.forEach { deleteAction ->
@@ -367,6 +368,7 @@ suspend fun startSync(
                         filesToSync.forEachIndexed { fileIndex, fileToSync ->
                             val displayName = when (fileToSync.action) {
                                 SyncAction.DELETE -> "🗑️ ${fileToSync.pcFile?.path ?: "unknown"}"
+                                SyncAction.UPDATE -> "🔄 ${fileToSync.androidFile?.name ?: fileToSync.pcFile?.path ?: "unknown"}"
                                 else -> {
                                     val androidFile = fileToSync.androidFile
                                     if (androidFile != null) {
@@ -393,7 +395,7 @@ suspend fun startSync(
                                     SyncAction.UPLOAD -> {
                                         val androidFile = fileToSync.androidFile
                                         if (androidFile != null) {
-                                            uploadFileToServer(context, serverUrl, folder, androidFile)
+                                            uploadFileToServer(context, serverUrl, folder, androidFile, isUpdate = false)
                                             completedOperations++
                                             
                                             // Handle post-sync actions based on sync mode
@@ -407,6 +409,18 @@ suspend fun startSync(
                                             }
                                         } else {
                                             android.util.Log.e("FolderSync", "UPLOAD action but androidFile is null")
+                                            completedOperations++
+                                        }
+                                    }
+                                    SyncAction.UPDATE -> {
+                                        val androidFile = fileToSync.androidFile
+                                        if (androidFile != null) {
+                                            // Update = Upload new version (will overwrite existing)
+                                            uploadFileToServer(context, serverUrl, folder, androidFile, isUpdate = true)
+                                            completedOperations++
+                                            android.util.Log.i("FolderSync", "Successfully updated PC file: ${androidFile.name}")
+                                        } else {
+                                            android.util.Log.e("FolderSync", "UPDATE action but androidFile is null")
                                             completedOperations++
                                         }
                                     }
@@ -466,8 +480,9 @@ suspend fun startSync(
                     }
                     
                     val downloadCount = filesToSync.count { it.action == SyncAction.DOWNLOAD }
+                    val updateCount = filesToSync.count { it.action == SyncAction.UPDATE }
                     val deleteCount = filesToSync.count { it.action == SyncAction.DELETE }
-                    android.util.Log.i("FolderSync", "💻→📱 Mirror sync plan: $downloadCount downloads, $deleteCount deletions")
+                    android.util.Log.i("FolderSync", "💻→📱 Mirror sync plan: $downloadCount downloads, $updateCount updates, $deleteCount deletions")
                     
                     if (filesToSync.isNotEmpty()) {
                         statuses[index] = statuses[index].copy(
@@ -483,6 +498,7 @@ suspend fun startSync(
                                 filesProcessed = completedOperations,
                                 currentFile = when (fileToSync.action) {
                                     SyncAction.DELETE -> "💻→📱 🗑️ ${fileToSync.androidFile?.name ?: "unknown"}"
+                                    SyncAction.UPDATE -> "💻→📱 🔄 ${fileToSync.pcFile?.path ?: "unknown"}"
                                     else -> "💻→📱 ${fileToSync.pcFile?.path ?: "unknown"}"
                                 }
                             )
@@ -493,7 +509,7 @@ suspend fun startSync(
                                     SyncAction.DOWNLOAD -> {
                                         val pcFile = fileToSync.pcFile
                                         if (pcFile != null) {
-                                            downloadFileFromServer(context, serverUrl, folder, pcFile)
+                                            downloadFileFromServer(context, serverUrl, folder, pcFile, isUpdate = false)
                                             completedOperations++
                                             
                                             // Handle post-sync actions based on sync mode
@@ -510,16 +526,29 @@ suspend fun startSync(
                                             completedOperations++
                                         }
                                     }
+                                    SyncAction.UPDATE -> {
+                                        val pcFile = fileToSync.pcFile
+                                        if (pcFile != null) {
+                                            // Update = Download new version (will overwrite existing)
+                                            downloadFileFromServer(context, serverUrl, folder, pcFile, isUpdate = true)
+                                            completedOperations++
+                                            android.util.Log.i("FolderSync", "Successfully updated Android file: ${pcFile.path}")
+                                        } else {
+                                            android.util.Log.e("FolderSync", "UPDATE action but pcFile is null")
+                                            completedOperations++
+                                        }
+                                    }
                                     SyncAction.DELETE -> {
                                         try {
                                             // Delete file from Android
                                             val androidFile = fileToSync.androidFile
                                             if (androidFile != null) {
                                                 deleteFileFromAndroid(context, androidFile)
-                                            completedOperations++
+                                                completedOperations++
                                                 android.util.Log.i("FolderSync", "Successfully deleted from Android: ${androidFile.name}")
                                             } else {
                                                 android.util.Log.e("FolderSync", "DELETE action but androidFile is null")
+                                                completedOperations++
                                             }
                                         } catch (deleteException: Exception) {
                                             failedOperations++
@@ -605,7 +634,8 @@ data class AndroidFile(
     val name: String,
     val uri: android.net.Uri,
     val size: Long,
-    val relativePath: String = "" // Path relative to the root sync folder
+    val relativePath: String = "", // Path relative to the root sync folder
+    val lastModified: Long = 0L // Last modified timestamp
 )
 
 suspend fun scanAndroidFolder(context: Context, folder: SyncFolder): List<AndroidFile> {
@@ -637,12 +667,20 @@ fun scanDocumentFolder(documentFile: DocumentFile, files: MutableList<AndroidFil
                     val fileSize = file.length()
                     
                     if (!fileName.isNullOrBlank() && file.canRead() && fileSize > 0) {
-                        // Include all files regardless of size, with their relative path
+                        // Get last modified time
+                        val lastModified = try {
+                            file.lastModified()
+                        } catch (e: Exception) {
+                            System.currentTimeMillis() // Fallback to current time
+                        }
+                        
+                        // Include all files regardless of size, with their relative path and modification time
                         files.add(AndroidFile(
                             name = fileName,
                             uri = file.uri,
                             size = fileSize,
-                            relativePath = currentPath
+                            relativePath = currentPath,
+                            lastModified = lastModified
                         ))
                     }
                 } else if (file.isDirectory && file.canRead()) {
@@ -671,7 +709,7 @@ fun createTestFile(context: Context, filename: String, content: String): android
     return android.net.Uri.fromFile(file)
 }
 
-suspend fun uploadFileToServer(context: Context, serverUrl: String, folder: SyncFolder, file: AndroidFile) = withContext(kotlinx.coroutines.Dispatchers.IO) {
+suspend fun uploadFileToServer(context: Context, serverUrl: String, folder: SyncFolder, file: AndroidFile, isUpdate: Boolean = false) = withContext(kotlinx.coroutines.Dispatchers.IO) {
     try {
         // Validate inputs
         if (file.name.isBlank()) {
@@ -736,12 +774,14 @@ suspend fun uploadFileToServer(context: Context, serverUrl: String, folder: Sync
                 "${file.relativePath}/$actualFileName"
             }
             
-            // Determine sync behavior based on sync mode
-            val syncMode = folder.androidToPcMode
-            val handleDuplicates = when (syncMode) {
-                SyncMode.COPY_AND_DELETE -> false  // Overwrite duplicates
-                SyncMode.MIRROR -> false           // Skip duplicates (handled by server)
-                SyncMode.SYNC -> true              // Handle duplicate names intelligently
+            // Determine sync behavior based on sync mode and update flag
+            val syncMode = if (isUpdate) "UPDATE" else folder.androidToPcMode.name
+            val handleDuplicates = when {
+                isUpdate -> false                  // Updates should overwrite
+                folder.androidToPcMode == SyncMode.COPY_AND_DELETE -> false  // Overwrite duplicates
+                folder.androidToPcMode == SyncMode.MIRROR -> false           // Skip duplicates (handled by server)
+                folder.androidToPcMode == SyncMode.SYNC -> true              // Handle duplicate names intelligently
+                else -> false
             }
             
             val multipartBody = okhttp3.MultipartBody.Builder()
@@ -750,7 +790,7 @@ suspend fun uploadFileToServer(context: Context, serverUrl: String, folder: Sync
                 .addFormDataPart("original_filename", fullFilePath) // Include relative path
                 .addFormDataPart("folder_path", folder.pcPath)
                 .addFormDataPart("handle_duplicates", handleDuplicates.toString())
-                .addFormDataPart("sync_mode", syncMode.name)
+                .addFormDataPart("sync_mode", syncMode)
                 .addFormDataPart("file_size", fileSize.toString())
                 .build()
             
@@ -874,7 +914,8 @@ data class PcFile(
     val path: String,
     val size: Long,
     val modified: Double,
-    val hash: String?
+    val hash: String?,
+    val lastModified: Long = (modified * 1000).toLong() // Convert to milliseconds
 )
 
 suspend fun scanPcFolder(serverUrl: String, folder: SyncFolder): List<PcFile> = withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -924,7 +965,7 @@ suspend fun scanPcFolder(serverUrl: String, folder: SyncFolder): List<PcFile> = 
     }
 }
 
-suspend fun downloadFileFromServer(context: Context, serverUrl: String, folder: SyncFolder, file: PcFile) = withContext(kotlinx.coroutines.Dispatchers.IO) {
+suspend fun downloadFileFromServer(context: Context, serverUrl: String, folder: SyncFolder, file: PcFile, isUpdate: Boolean = false) = withContext(kotlinx.coroutines.Dispatchers.IO) {
     try {
         val client = okhttp3.OkHttpClient.Builder()
             .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
@@ -968,16 +1009,21 @@ suspend fun downloadFileFromServer(context: Context, serverUrl: String, folder: 
             // Get filename
             val fileName = pathParts.last()
             
-            // Handle existing files based on sync mode
+            // Handle existing files based on sync mode and update flag
             val existingFile = currentFolder.findFile(fileName)
             if (existingFile != null && existingFile.exists()) {
-                when (folder.pcToAndroidMode) {
-                    SyncMode.MIRROR -> {
-                        // Skip if file already exists
+                when {
+                    isUpdate -> {
+                        // For updates, always replace the existing file
+                        existingFile.delete()
+                        android.util.Log.i("FolderSync", "Replacing existing file for update: $fileName")
+                    }
+                    folder.pcToAndroidMode == SyncMode.MIRROR -> {
+                        // Skip if file already exists (shouldn't happen in Mirror mode with proper comparison)
                         android.util.Log.i("FolderSync", "Skipping existing file: $fileName")
                         return@withContext
                     }
-                    SyncMode.COPY_AND_DELETE, SyncMode.SYNC -> {
+                    folder.pcToAndroidMode == SyncMode.COPY_AND_DELETE || folder.pcToAndroidMode == SyncMode.SYNC -> {
                         // Delete existing file to replace it
                         existingFile.delete()
                     }
@@ -1040,7 +1086,8 @@ enum class SyncAction {
     UPLOAD,      // Upload Android file to PC
     DOWNLOAD,    // Download PC file to Android
     SKIP,        // Skip due to conflict or already exists
-    DELETE       // Delete file (for future use)
+    DELETE,      // Delete file
+    UPDATE       // Update file (newer version available)
 }
 
 fun compareAndFilterFiles(
@@ -1072,11 +1119,20 @@ fun compareAndFilterFiles(
                     matchingPcFile == null -> {
                         // File doesn't exist on PC, upload it
                         filesToSync.add(FileToSync(androidFile, null, SyncAction.UPLOAD))
-                        android.util.Log.i("FolderSync", "�→💻 p✅ WILL UPLOAD new file: $fullPath")
+                        android.util.Log.i("FolderSync", "📱→💻 ✅ WILL UPLOAD new file: $fullPath")
+                    }
+                    androidFile.lastModified > matchingPcFile.lastModified -> {
+                        // Android file is newer, update PC file
+                        filesToSync.add(FileToSync(androidFile, matchingPcFile, SyncAction.UPDATE))
+                        android.util.Log.i("FolderSync", "📱→💻 🔄 WILL UPDATE PC file: $fullPath (Android newer)")
+                    }
+                    androidFile.lastModified < matchingPcFile.lastModified -> {
+                        // PC file is newer, skip (or could update Android if bidirectional)
+                        android.util.Log.i("FolderSync", "📱→💻 ⏭️ SKIPPING older file: $fullPath (PC file is newer)")
                     }
                     else -> {
-                        // File exists on PC with same name, skip it (no size comparison)
-                        android.util.Log.i("FolderSync", "📱→💻 ⏭️ SKIPPING existing file: $fullPath (file already exists on PC)")
+                        // Same modification time, skip
+                        android.util.Log.i("FolderSync", "📱→💻 ⏭️ SKIPPING identical file: $fullPath (same modification time)")
                     }
                 }
             }
@@ -1103,9 +1159,18 @@ fun compareAndFilterFiles(
                         filesToSync.add(FileToSync(null, pcFile, SyncAction.DOWNLOAD))
                         android.util.Log.i("FolderSync", "💻→📱 ✅ WILL DOWNLOAD new file: ${pcFile.path}")
                     }
+                    pcFile.lastModified > matchingAndroidFile.lastModified -> {
+                        // PC file is newer, update Android file
+                        filesToSync.add(FileToSync(matchingAndroidFile, pcFile, SyncAction.UPDATE))
+                        android.util.Log.i("FolderSync", "💻→📱 🔄 WILL UPDATE Android file: ${pcFile.path} (PC newer)")
+                    }
+                    pcFile.lastModified < matchingAndroidFile.lastModified -> {
+                        // Android file is newer, skip (or could update PC if bidirectional)
+                        android.util.Log.i("FolderSync", "💻→📱 ⏭️ SKIPPING older file: ${pcFile.path} (Android file is newer)")
+                    }
                     else -> {
-                        // File exists on Android with same name, skip it (no size comparison)
-                        android.util.Log.i("FolderSync", "💻→📱 ⏭️ SKIPPING existing file: ${pcFile.path} (file already exists on Android)")
+                        // Same modification time, skip
+                        android.util.Log.i("FolderSync", "💻→📱 ⏭️ SKIPPING identical file: ${pcFile.path} (same modification time)")
                     }
                 }
             }
@@ -1127,7 +1192,7 @@ fun compareAndFilterFiles(
         }
     }
     
-    android.util.Log.i("FolderSync", "$direction Mirror mode: ${filesToSync.count { it.action == SyncAction.UPLOAD || it.action == SyncAction.DOWNLOAD }} files to sync, ${filesToSync.count { it.action == SyncAction.DELETE }} files to delete")
+    android.util.Log.i("FolderSync", "$direction Mirror mode: ${filesToSync.count { it.action == SyncAction.UPLOAD || it.action == SyncAction.DOWNLOAD || it.action == SyncAction.UPDATE }} files to sync, ${filesToSync.count { it.action == SyncAction.DELETE }} files to delete")
     
     return filesToSync
 }
