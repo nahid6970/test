@@ -100,39 +100,35 @@ fun MainScreen(
             TopAppBar(
                 title = { Text("Folder Sync") },
                 actions = {
+                    // Add button
+                    IconButton(onClick = onPickFolder) {
+                        Icon(Icons.Default.Add, contentDescription = "Add Folder")
+                    }
+                    
+                    // Sync button
+                    IconButton(
+                        onClick = {
+                            try {
+                                if (syncFolders.any { it.isEnabled }) {
+                                    val intent = Intent(context, SyncActivity::class.java)
+                                    context.startActivity(intent)
+                                } else {
+                                    Toast.makeText(context, "No folders enabled for sync", Toast.LENGTH_SHORT).show()
+                                }
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Error starting sync: ${e.message}", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Start Sync")
+                    }
+                    
+                    // Settings button
                     IconButton(onClick = { showSettings = true }) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            Column {
-                FloatingActionButton(
-                    onClick = onPickFolder,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Folder")
-                }
-                
-                FloatingActionButton(
-                    onClick = {
-                        try {
-                            if (syncFolders.any { it.isEnabled }) {
-                                val intent = Intent(context, SyncActivity::class.java)
-                                context.startActivity(intent)
-                            } else {
-                                Toast.makeText(context, "No folders enabled for sync", Toast.LENGTH_SHORT).show()
-                            }
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "Error starting sync: ${e.message}", Toast.LENGTH_LONG).show()
-                        }
-                    },
-                    containerColor = MaterialTheme.colorScheme.secondary
-                ) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Start Sync")
-                }
-            }
         }
     ) { paddingValues ->
         Column(
