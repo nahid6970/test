@@ -475,6 +475,67 @@ def list_files():
         logger.error(f"List files error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/list-pc-files', methods=['POST'])
+def list_pc_files():
+    """List files from PC folder for PC to Android sync"""
+    try:
+        # Get the PC folder path from request
+        pc_path = request.form.get('pc_path', '')
+        
+        if not pc_path:
+            return jsonify({'error': 'PC path is required'}), 400
+        
+        # Resolve the PC directory path
+        if os.path.isabs(pc_path):
+            source_dir = pc_path
+        else:
+            source_dir = os.path.join(CONFIG['UPLOAD_FOLDER'], pc_path)
+        
+        if not os.path.exists(source_dir):
+            return jsonify({'error': f'PC folder not found: {source_dir}'}), 404
+        
+        if not os.path.isdir(source_dir):
+            return jsonify({'error': f'Path is not a directory: {source_dir}'}), 400
+        
+        # Recursively scan for files
+        files = []
+        
+        def scan_directory(directory, relative_path=""):
+            try:
+                for item in os.listdir(directory):
+                    item_path = os.path.join(directory, item)
+                    # Use forward slashes for relative paths to ensure consistency
+                    relative_item_path = f"{relative_path}/{item}" if relative_path else item
+                    
+                    if os.path.isfile(item_path):
+                        files.append({
+                            'name': item,
+                            'relative_path': relative_item_path,
+                            'size': os.path.getsize(item_path),
+                            'modified': os.path.getmtime(item_path)
+                        })
+                    elif os.path.isdir(item_path):
+                        # Recursively scan subdirectories
+                        scan_directory(item_path, relative_item_path)
+            except PermissionError:
+                logger.warning(f"Permission denied accessing: {directory}")
+            except Exception as e:
+                logger.error(f"Error scanning directory {directory}: {e}")
+        
+        scan_directory(source_dir)
+        
+        logger.info(f"Found {len(files)} files in PC folder: {source_dir}")
+        
+        return jsonify({
+            'files': files,
+            'source_path': source_dir,
+            'total_files': len(files)
+        })
+        
+    except Exception as e:
+        logger.error(f"List PC files error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/download/<path:filename>', methods=['GET'])
 def download_file(filename):
     """Download a file from the server"""
@@ -488,6 +549,61 @@ def download_file(filename):
         
     except Exception as e:
         logger.error(f"Download error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/download-pc-file', methods=['POST'])
+def download_pc_file():
+    """Download a specific file from PC folder for PC to Android sync"""
+    try:
+        pc_path = request.form.get('pc_path', '')
+        relative_file_path = request.form.get('relative_file_path', '')
+        
+        logger.info(f"Download request - PC path: '{pc_path}', Relative path: '{relative_file_path}'")
+        
+        if not pc_path or not relative_file_path:
+            logger.error(f"Missing parameters - PC path: '{pc_path}', Relative path: '{relative_file_path}'")
+            return jsonify({'error': 'PC path and relative file path are required'}), 400
+        
+        # Resolve the PC directory path
+        if os.path.isabs(pc_path):
+            source_dir = pc_path
+        else:
+            source_dir = os.path.join(CONFIG['UPLOAD_FOLDER'], pc_path)
+        
+        # Normalize path separators for cross-platform compatibility
+        relative_file_path = relative_file_path.replace('\\', '/')
+        logger.info(f"Normalized relative path: '{relative_file_path}'")
+        
+        # Build full file path
+        file_path = os.path.join(source_dir, relative_file_path)
+        
+        # Security check - ensure file is within the source directory
+        try:
+            # Normalize both paths for comparison
+            normalized_source = os.path.normpath(os.path.abspath(source_dir))
+            normalized_file = os.path.normpath(os.path.abspath(file_path))
+            
+            if not normalized_file.startswith(normalized_source):
+                logger.error(f"Security violation - file outside source directory: {normalized_file}")
+                return jsonify({'error': 'Invalid file path'}), 400
+        except Exception as e:
+            logger.error(f"Path security check failed: {e}")
+            return jsonify({'error': 'Invalid file path'}), 400
+        
+        if not os.path.exists(file_path):
+            logger.error(f"File not found: {file_path}")
+            return jsonify({'error': f'File not found: {relative_file_path}'}), 404
+        
+        if not os.path.isfile(file_path):
+            logger.error(f"Path is not a file: {file_path}")
+            return jsonify({'error': f'Path is not a file: {relative_file_path}'}), 404
+        
+        logger.info(f"Downloading PC file: {file_path}")
+        
+        return send_file(file_path, as_attachment=True, download_name=os.path.basename(relative_file_path))
+        
+    except Exception as e:
+        logger.error(f"Download PC file error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/config', methods=['GET'])
