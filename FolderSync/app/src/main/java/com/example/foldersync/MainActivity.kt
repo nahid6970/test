@@ -471,11 +471,11 @@ fun AddFolderDialog(
                     value = pcPath,
                     onValueChange = { pcPath = it },
                     label = { Text("PC Path") },
-                    placeholder = { Text("Movies or C:/Movies") },
+                    placeholder = { Text("Movies or C:/test or D:/MyFiles") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
-                    text = "Use relative path (Movies) or absolute path (C:/Movies)",
+                    text = "Relative: Movies → ~/Desktop/SyncFolders/Movies\nAbsolute: C:/test → C:/test",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -80,6 +80,38 @@ def sanitize_filename(filename):
     # filename = filename.replace(' ', '_')
     return filename
 
+def resolve_target_directory(folder_path, base_upload_folder):
+    """Resolve target directory handling both absolute and relative paths"""
+    if not folder_path or folder_path == 'default':
+        return os.path.join(base_upload_folder, 'default')
+    
+    # Check if it's an absolute path
+    if os.path.isabs(folder_path):
+        # Validate that the absolute path is safe (not trying to access system directories)
+        normalized_path = os.path.normpath(folder_path)
+        
+        # Basic security check - don't allow access to system directories
+        dangerous_paths = [
+            'C:\\Windows', 'C:\\Program Files', 'C:\\Program Files (x86)',
+            '/etc', '/usr', '/bin', '/sbin', '/root', '/sys', '/proc'
+        ]
+        
+        for dangerous in dangerous_paths:
+            if normalized_path.lower().startswith(dangerous.lower()):
+                logger.warning(f"Blocked access to system directory: {normalized_path}")
+                # Fall back to relative path in upload folder
+                safe_name = secure_filename(os.path.basename(folder_path))
+                return os.path.join(base_upload_folder, safe_name)
+        
+        logger.info(f"Using absolute path: {normalized_path}")
+        return normalized_path
+    else:
+        # Relative path - sanitize and place in upload folder
+        safe_folder = secure_filename(folder_path)
+        target_dir = os.path.join(base_upload_folder, safe_folder)
+        logger.info(f"Using relative path: {target_dir}")
+        return target_dir
+
 def get_file_hash(filepath):
     """Calculate MD5 hash of a file"""
     hash_md5 = hashlib.md5()
@@ -179,12 +211,9 @@ def upload_file():
         
         logger.info(f"Legacy upload: {original_filename} -> {folder_path}")
         
-        # Sanitize paths
-        folder_path = secure_filename(folder_path) if folder_path != 'default' else 'default'
+        # Resolve target directory (handles both absolute and relative paths)
+        target_dir = resolve_target_directory(folder_path, CONFIG['UPLOAD_FOLDER'])
         original_filename = sanitize_filename(original_filename)
-        
-        # Create target directory
-        target_dir = os.path.join(CONFIG['UPLOAD_FOLDER'], folder_path)
         
         # Handle subdirectories in filename
         if '/' in original_filename:
@@ -274,8 +303,8 @@ def rclone_sync():
         
         logger.info(f"Rclone sync: {original_filename} -> {folder_path} with flags: {rclone_flags}")
         
-        # Sanitize inputs
-        folder_path = secure_filename(folder_path) if folder_path != 'default' else 'default'
+        # Resolve target directory (handles both absolute and relative paths)
+        target_dir = resolve_target_directory(folder_path, CONFIG['UPLOAD_FOLDER'])
         original_filename = sanitize_filename(original_filename)
         
         # Create source directory structure
@@ -297,7 +326,6 @@ def rclone_sync():
         
         try:
             # Create target directory
-            target_dir = os.path.join(CONFIG['UPLOAD_FOLDER'], folder_path)
             os.makedirs(target_dir, exist_ok=True)
             
             # Parse and validate rclone flags

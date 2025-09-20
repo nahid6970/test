@@ -106,6 +106,33 @@ Update your Android app server URL to:
 http://YOUR_SERVER_IP:5016
 ```
 
+## 📁 Path Handling
+
+The server supports both **relative** and **absolute** paths for the PC destination:
+
+### Relative Paths
+- **Input:** `Movies`
+- **Result:** `~/Desktop/SyncFolders/Movies`
+- **Use case:** Organize files within the default sync folder
+
+### Absolute Paths  
+- **Input:** `C:/test` or `/home/user/documents`
+- **Result:** Files go directly to `C:/test` or `/home/user/documents`
+- **Use case:** Sync to specific locations on your system
+
+### Security Features
+- ✅ **Path validation** - Blocks access to system directories
+- ✅ **Path normalization** - Handles different path formats
+- ✅ **Safe fallback** - Uses relative path if absolute path is blocked
+
+### Examples
+```
+Relative: "Downloads" → ~/Desktop/SyncFolders/Downloads
+Absolute: "D:/MyFiles" → D:/MyFiles
+Absolute: "C:/Users/John/Documents" → C:/Users/John/Documents
+Blocked: "C:/Windows" → ~/Desktop/SyncFolders/Windows (fallback)
+```
+
 ## 🔧 API Endpoints
 
 ### Health Check

@@ -18,3 +18,36 @@
  * Running on http://127.0.0.1:5016
  * Running on http://192.168.0.101:5016
 2025-09-20 12:47:06,185 - INFO - [33mPress CTRL+C to quit[0m
+2025-09-20 12:47:13,131 - INFO - Rclone is available and enabled
+2025-09-20 12:47:13,131 - INFO - Starting FolderSync Server
+2025-09-20 12:47:13,132 - INFO - Upload folder: C:\Users\nahid/Desktop/SyncFolders
+2025-09-20 12:47:13,132 - INFO - Server: http://0.0.0.0:5016
+2025-09-20 12:47:13,133 - INFO - Rclone: Enabled
+2025-09-20 12:47:14,403 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5016
+ * Running on http://192.168.0.101:5016
+2025-09-20 12:47:14,404 - INFO - [33mPress CTRL+C to quit[0m
+2025-09-20 12:49:25,468 - INFO - Rclone sync: Selected Job Circular - June 2025.pdf -> C:/test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 12:49:25,539 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Users\nahid/Desktop/SyncFolders\C_test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 12:49:25,792 - INFO - Rclone sync completed successfully: Selected_Job_Circular_-_June_2025.pdf
+2025-09-20 12:49:25,796 - INFO - 192.168.0.101 - - [20/Sep/2025 12:49:25] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 12:50:35,203 - INFO - Rclone sync: Selected Job Circular - June 2025.pdf -> C:/test with flags: --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 12:50:35,265 - INFO - Executing rclone command: rclone copy C:\Users\nahid/Desktop/SyncFolders\rclone_temp C:\Users\nahid/Desktop/SyncFolders\C_test --progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3
+2025-09-20 12:50:35,495 - INFO - Rclone sync completed successfully: Selected_Job_Circular_-_June_2025.pdf
+2025-09-20 12:50:35,500 - INFO - 192.168.0.101 - - [20/Sep/2025 12:50:35] "POST /api/rclone-sync HTTP/1.1" 200 -
+2025-09-20 12:54:43,489 - INFO - Rclone is available and enabled
+2025-09-20 12:54:43,489 - INFO - Starting FolderSync Server
+2025-09-20 12:54:43,489 - INFO - Upload folder: C:\Users\nahid/Desktop/SyncFolders
+2025-09-20 12:54:43,491 - INFO - Server: http://0.0.0.0:5016
+2025-09-20 12:54:43,491 - INFO - Rclone: Enabled
+2025-09-20 12:54:44,829 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5016
+ * Running on http://192.168.0.101:5016
+2025-09-20 12:54:44,832 - INFO - [33mPress CTRL+C to quit[0m
+2025-09-20 12:54:49,206 - INFO - Legacy upload: tttttttt/HyperCeiler_settings_backup_2025-05-12-18_46_45.json -> C:/Test
+2025-09-20 12:54:49,213 - INFO - File uploaded successfully: C:\Users\nahid/Desktop/SyncFolders\C_Test\tttttttt_HyperCeiler_settings_backup_2025-05-12-18_46_45.json
+2025-09-20 12:54:49,214 - INFO - 192.168.0.101 - - [20/Sep/2025 12:54:49] "POST /api/upload HTTP/1.1" 200 -
+2025-09-20 12:54:54,364 - ERROR - Upload error: 400 Bad Request: The browser (or proxy) sent a request that this server could not understand.
+2025-09-20 12:54:54,366 - INFO - 192.168.0.101 - - [20/Sep/2025 12:54:54] "[35m[1mPOST /api/upload HTTP/1.1[0m" 500 -
