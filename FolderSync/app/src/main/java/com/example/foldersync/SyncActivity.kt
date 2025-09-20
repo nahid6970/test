@@ -315,103 +315,103 @@ suspend fun startSync(
                 )
                 onStatusUpdate(statuses.toList())
                 
-                // Scan Android folder for files
-                val files = scanAndroidFolder(context, folder)
+                var totalOperations = 0
+                var completedOperations = 0
+                var failedOperations = 0
+                val failedFiles = mutableListOf<String>()
                 
-                if (files.isEmpty()) {
+                // Handle Android to PC sync
+                if (folder.syncDirection == SyncDirection.ANDROID_TO_PC) {
+                    val androidFiles = scanAndroidFolder(context, folder)
+                    totalOperations += androidFiles.size
+                    
+                    if (androidFiles.isNotEmpty()) {
+                        statuses[index] = statuses[index].copy(
+                            status = SyncState.SYNCING,
+                            totalFiles = totalOperations,
+                            currentFile = "Syncing Android → PC"
+                        )
+                        onStatusUpdate(statuses.toList())
+                        
+                        androidFiles.forEachIndexed { fileIndex, file ->
+                            val displayName = if (file.relativePath.isEmpty()) {
+                                file.name
+                            } else {
+                                "${file.relativePath}/${file.name}"
+                            }
+                            
+                            statuses[index] = statuses[index].copy(
+                                progress = completedOperations.toFloat() / totalOperations,
+                                filesProcessed = completedOperations,
+                                currentFile = "📱→💻 $displayName"
+                            )
+                            onStatusUpdate(statuses.toList())
+                            
+                            try {
+                                uploadFileToServer(context, serverUrl, folder, file)
+                                completedOperations++
+                                
+                                // Handle post-sync actions based on sync mode
+                                if (folder.androidToPcMode == SyncMode.COPY_AND_DELETE) {
+                                    try {
+                                        deleteFileFromAndroid(context, file)
+                                        android.util.Log.i("FolderSync", "Successfully uploaded and deleted: ${file.name}")
+                                    } catch (e: Exception) {
+                                        android.util.Log.w("FolderSync", "Upload succeeded but failed to delete ${file.name}: ${e.message}")
+                                    }
+                                }
+                                
+                            } catch (uploadException: Exception) {
+                                failedOperations++
+                                failedFiles.add("📱→💻 ${file.name}")
+                                android.util.Log.e("FolderSync", "Upload failed for ${file.name}: ${uploadException.message}")
+                            }
+                            
+                            delay(100)
+                        }
+                    }
+                }
+                
+                // Handle PC to Android sync (placeholder for future implementation)
+                if (folder.syncDirection == SyncDirection.PC_TO_ANDROID) {
+                    // TODO: Implement PC to Android sync
+                    // This would require the server to send files to Android
+                    statuses[index] = statuses[index].copy(
+                        currentFile = "💻→📱 PC to Android sync not yet implemented"
+                    )
+                    onStatusUpdate(statuses.toList())
+                    delay(500)
+                }
+                
+                // Update final status based on results
+                if (totalOperations == 0) {
                     statuses[index] = statuses[index].copy(
                         status = SyncState.COMPLETED,
                         progress = 1f,
                         currentFile = "No files to sync"
                     )
-                    onStatusUpdate(statuses.toList())
-                    return@forEachIndexed
-                }
-                
-                // Update status to syncing
-                statuses[index] = statuses[index].copy(
-                    status = SyncState.SYNCING,
-                    totalFiles = files.size
-                )
-                onStatusUpdate(statuses.toList())
-                
-                // Upload each file
-                var successfulUploads = 0
-                var failedUploads = 0
-                val failedFiles = mutableListOf<String>()
-                
-                files.forEachIndexed { fileIndex, file ->
-                    // Show full path in progress (folder/subfolder/file.txt)
-                    val displayName = if (file.relativePath.isEmpty()) {
-                        file.name
-                    } else {
-                        "${file.relativePath}/${file.name}"
-                    }
-                    
-                    statuses[index] = statuses[index].copy(
-                        progress = fileIndex.toFloat() / files.size,
-                        filesProcessed = fileIndex,
-                        currentFile = displayName
-                    )
-                    onStatusUpdate(statuses.toList())
-                    
-                    try {
-                        // Upload file to server
-                        uploadFileToServer(context, serverUrl, folder, file)
-                        successfulUploads++
-                        
-                        // Only delete if upload was successful AND deletion is enabled
-                        val sharedPrefs = context.getSharedPreferences("folder_sync_prefs", Context.MODE_PRIVATE)
-                        val deleteSyncedItems = sharedPrefs.getBoolean("delete_synced_items", false)
-                        
-                        if (deleteSyncedItems) {
-                            try {
-                                deleteFileFromAndroid(context, file)
-                                android.util.Log.i("FolderSync", "Successfully uploaded and deleted: ${file.name}")
-                            } catch (e: Exception) {
-                                // Log deletion error but don't fail the sync since upload succeeded
-                                android.util.Log.w("FolderSync", "Upload succeeded but failed to delete ${file.name}: ${e.message}")
-                            }
-                        }
-                        
-                    } catch (uploadException: Exception) {
-                        // Upload failed - do NOT delete the file
-                        failedUploads++
-                        failedFiles.add(file.name)
-                        android.util.Log.e("FolderSync", "Upload failed for ${file.name}: ${uploadException.message}")
-                        // Continue with next file instead of failing entire folder
-                    }
-                    
-                    // Small delay to show progress
-                    delay(100)
-                }
-                
-                // Update final status based on results
-                if (failedUploads == 0) {
-                    // All files succeeded
+                } else if (failedOperations == 0) {
                     statuses[index] = statuses[index].copy(
                         status = SyncState.COMPLETED,
                         progress = 1f,
-                        filesProcessed = files.size,
+                        filesProcessed = completedOperations,
                         currentFile = ""
                     )
-                } else if (successfulUploads > 0) {
-                    // Some files succeeded, some failed
+                } else if (completedOperations > 0) {
                     statuses[index] = statuses[index].copy(
                         status = SyncState.ERROR,
                         progress = 1f,
-                        filesProcessed = successfulUploads,
+                        filesProcessed = completedOperations,
                         currentFile = "",
-                        errorMessage = "Failed to upload ${failedUploads} files: ${failedFiles.take(3).joinToString(", ")}${if (failedFiles.size > 3) "..." else ""}"
+                        errorMessage = "Failed: ${failedOperations}/${totalOperations} operations. ${failedFiles.take(2).joinToString(", ")}${if (failedFiles.size > 2) "..." else ""}"
                     )
                 } else {
-                    // All files failed
                     statuses[index] = statuses[index].copy(
                         status = SyncState.ERROR,
                         progress = 1f,
                         filesProcessed = 0,
                         currentFile = "",
-                        errorMessage = "Failed to upload all ${failedUploads} files"
+                        errorMessage = "Failed all ${failedOperations} operations"
                     )
                 }
                 onStatusUpdate(statuses.toList())
@@ -568,15 +568,19 @@ suspend fun uploadFileToServer(context: Context, serverUrl: String, folder: Sync
             // Create request body from temp file (like the working example)
             val requestBody = tempFile.asRequestBody("application/octet-stream".toMediaType())
             
-            // Get duplicate handling preference
-            val sharedPrefs = context.getSharedPreferences("folder_sync_prefs", Context.MODE_PRIVATE)
-            val handleDuplicates = sharedPrefs.getBoolean("handle_duplicates", true)
-            
             // Build the full file path including subdirectories
             val fullFilePath = if (file.relativePath.isEmpty()) {
                 actualFileName
             } else {
                 "${file.relativePath}/$actualFileName"
+            }
+            
+            // Determine sync behavior based on sync mode
+            val syncMode = folder.androidToPcMode
+            val handleDuplicates = when (syncMode) {
+                SyncMode.COPY_AND_DELETE -> false  // Overwrite duplicates
+                SyncMode.MIRROR -> false           // Skip duplicates (handled by server)
+                SyncMode.SYNC -> true              // Handle duplicate names intelligently
             }
             
             val multipartBody = okhttp3.MultipartBody.Builder()
@@ -585,6 +589,8 @@ suspend fun uploadFileToServer(context: Context, serverUrl: String, folder: Sync
                 .addFormDataPart("original_filename", fullFilePath) // Include relative path
                 .addFormDataPart("folder_path", folder.pcPath)
                 .addFormDataPart("handle_duplicates", handleDuplicates.toString())
+                .addFormDataPart("sync_mode", syncMode.name)
+                .addFormDataPart("file_size", fileSize.toString())
                 .build()
             
             val request = okhttp3.Request.Builder()

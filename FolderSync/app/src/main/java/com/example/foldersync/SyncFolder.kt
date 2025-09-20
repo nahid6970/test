@@ -10,7 +10,9 @@ data class SyncFolder(
     val pcPath: String,
     val isEnabled: Boolean = true,
     val lastSyncTime: Long = 0L,
-    val syncDirection: SyncDirection = SyncDirection.BOTH
+    val syncDirection: SyncDirection = SyncDirection.ANDROID_TO_PC,
+    val androidToPcMode: SyncMode = SyncMode.COPY_AND_DELETE,
+    val pcToAndroidMode: SyncMode = SyncMode.COPY_AND_DELETE
 ) {
     // Helper property to get Uri from String
     val androidUri: Uri?
@@ -19,8 +21,13 @@ data class SyncFolder(
 
 enum class SyncDirection {
     ANDROID_TO_PC,
-    PC_TO_ANDROID,
-    BOTH
+    PC_TO_ANDROID
+}
+
+enum class SyncMode {
+    COPY_AND_DELETE,  // Move files after successful sync
+    MIRROR,           // Compare files, don't copy duplicates
+    SYNC              // Like mirror but handle duplicate names differently
 }
 
 data class SyncStatus(

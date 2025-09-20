@@ -92,6 +92,7 @@ fun MainScreen(
     var syncFolders by remember { mutableStateOf(loadSyncFolders(context)) }
     var showSettings by remember { mutableStateOf(false) }
     var editingFolder by remember { mutableStateOf<SyncFolder?>(null) }
+    var advancedSettingsFolder by remember { mutableStateOf<SyncFolder?>(null) }
     
     Scaffold(
         topBar = {
@@ -182,7 +183,8 @@ fun MainScreen(
                             onDelete = {
                                 syncFolders = syncFolders.filter { it.id != folder.id }
                                 saveSyncFolders(context, syncFolders)
-                            }
+                            },
+                            onAdvancedSettings = { advancedSettingsFolder = folder }
                         )
                     }
                 }
@@ -243,6 +245,21 @@ fun MainScreen(
             }
         )
     }
+    
+    // Advanced Settings Dialog
+    if (advancedSettingsFolder != null) {
+        AdvancedSettingsDialog(
+            folder = advancedSettingsFolder!!,
+            onSave = { updatedFolder ->
+                syncFolders = syncFolders.map { 
+                    if (it.id == updatedFolder.id) updatedFolder else it 
+                }
+                saveSyncFolders(context, syncFolders)
+                advancedSettingsFolder = null
+            },
+            onDismiss = { advancedSettingsFolder = null }
+        )
+    }
 }
 
 @Composable
@@ -250,7 +267,8 @@ fun SyncFolderCard(
     folder: SyncFolder,
     onToggleEnabled: (Boolean) -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onAdvancedSettings: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth()
@@ -280,9 +298,24 @@ fun SyncFolderCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "Direction: ${folder.syncDirection.name.replace("_", " ")}",
+                        text = "Direction: ${when(folder.syncDirection) {
+                            SyncDirection.ANDROID_TO_PC -> "Android to PC"
+                            SyncDirection.PC_TO_ANDROID -> "PC to Android"
+                        }}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
+                    )
+                    
+                    // Show sync modes in a compact format
+                    val syncModeText = when(folder.syncDirection) {
+                        SyncDirection.ANDROID_TO_PC -> "📱→💻 ${folder.androidToPcMode.name.replace("_", " ").lowercase()}"
+                        SyncDirection.PC_TO_ANDROID -> "💻→📱 ${folder.pcToAndroidMode.name.replace("_", " ").lowercase()}"
+                    }
+                    
+                    Text(
+                        text = syncModeText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 
@@ -293,6 +326,10 @@ fun SyncFolderCard(
                         checked = folder.isEnabled,
                         onCheckedChange = onToggleEnabled
                     )
+                    
+                    IconButton(onClick = onAdvancedSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = "Advanced Settings")
+                    }
                     
                     IconButton(onClick = onEdit) {
                         Icon(Icons.Default.Edit, contentDescription = "Edit")
@@ -313,16 +350,7 @@ fun SettingsDialog(
     onUrlChange: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val context = LocalContext.current
-    val sharedPrefs = context.getSharedPreferences("folder_sync_prefs", Context.MODE_PRIVATE)
-    
     var tempUrl by remember { mutableStateOf(currentUrl) }
-    var handleDuplicates by remember { 
-        mutableStateOf(sharedPrefs.getBoolean("handle_duplicates", true)) 
-    }
-    var deleteSyncedItems by remember { 
-        mutableStateOf(sharedPrefs.getBoolean("delete_synced_items", false)) 
-    }
     
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -347,59 +375,11 @@ fun SettingsDialog(
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                Text("Duplicate File Handling:")
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Switch(
-                        checked = handleDuplicates,
-                        onCheckedChange = { handleDuplicates = it }
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Move duplicates to separate folders",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = if (handleDuplicates) "Creates dup1, dup2, etc. folders for duplicate files" 
-                                  else "Overwrites existing files with same name",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Text("Post-Sync Actions:")
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Switch(
-                        checked = deleteSyncedItems,
-                        onCheckedChange = { deleteSyncedItems = it }
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Delete items after successful sync",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = if (deleteSyncedItems) "Files will be deleted from Android after uploading to PC" 
-                                  else "Files remain on Android after sync",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                Text(
+                    text = "Note: Sync modes and duplicate handling are now configured per folder.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         },
         confirmButton = {
@@ -407,10 +387,6 @@ fun SettingsDialog(
                 onClick = {
                     if (tempUrl.isNotBlank()) {
                         onUrlChange(tempUrl)
-                        sharedPrefs.edit()
-                            .putBoolean("handle_duplicates", handleDuplicates)
-                            .putBoolean("delete_synced_items", deleteSyncedItems)
-                            .apply()
                         onDismiss()
                     }
                 }
@@ -447,20 +423,21 @@ fun AddFolderDialog(
     var name by remember { mutableStateOf(initialName) }
     var androidPath by remember { mutableStateOf(initialAndroidPath) }
     var pcPath by remember { mutableStateOf(existingFolder?.pcPath ?: "") }
-    var direction by remember { mutableStateOf(existingFolder?.syncDirection ?: SyncDirection.BOTH) }
+    var direction by remember { mutableStateOf(existingFolder?.syncDirection ?: SyncDirection.ANDROID_TO_PC) }
     
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (existingFolder != null) "Edit Sync Folder" else "Add Sync Folder") },
         text = {
-            Column {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("Folder Name") },
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(8.dp))
                 
                 OutlinedTextField(
                     value = androidPath,
@@ -469,7 +446,6 @@ fun AddFolderDialog(
                     placeholder = { Text("/storage/emulated/0/DCIM/Camera") },
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(8.dp))
                 
                 OutlinedTextField(
                     value = pcPath,
@@ -483,9 +459,10 @@ fun AddFolderDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(8.dp))
                 
-                Text("Sync Direction:")
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text("Sync Direction:", fontWeight = FontWeight.Bold)
                 SyncDirection.values().forEach { dir ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically
@@ -494,9 +471,19 @@ fun AddFolderDialog(
                             selected = direction == dir,
                             onClick = { direction = dir }
                         )
-                        Text(dir.name.replace("_", " "))
+                        Text(when(dir) {
+                            SyncDirection.ANDROID_TO_PC -> "Android to PC"
+                            SyncDirection.PC_TO_ANDROID -> "PC to Android"
+                        })
                     }
                 }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "💡 Use the settings icon after creating the folder to configure sync modes (Copy & Delete, Mirror, Sync)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         },
         confirmButton = {
@@ -536,4 +523,118 @@ fun saveSyncFolders(context: Context, folders: List<SyncFolder>) {
     val sharedPrefs = context.getSharedPreferences("folder_sync_prefs", Context.MODE_PRIVATE)
     val json = Gson().toJson(folders)
     sharedPrefs.edit().putString("sync_folders", json).apply()
+}
+
+@Composable
+fun AdvancedSettingsDialog(
+    folder: SyncFolder,
+    onSave: (SyncFolder) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var androidToPcMode by remember { mutableStateOf(folder.androidToPcMode) }
+    var pcToAndroidMode by remember { mutableStateOf(folder.pcToAndroidMode) }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Advanced Sync Settings") },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Folder: ${folder.name}",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                
+                Text(
+                    text = "Direction: ${when(folder.syncDirection) {
+                        SyncDirection.ANDROID_TO_PC -> "Android to PC"
+                        SyncDirection.PC_TO_ANDROID -> "PC to Android"
+                    }}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                
+                // Show sync mode options based on folder's sync direction
+                when (folder.syncDirection) {
+                    SyncDirection.ANDROID_TO_PC -> {
+                        Text("📱→💻 Android to PC Mode:", fontWeight = FontWeight.Bold)
+                        SyncMode.values().forEach { mode ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                RadioButton(
+                                    selected = androidToPcMode == mode,
+                                    onClick = { androidToPcMode = mode }
+                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = mode.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() },
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = when (mode) {
+                                            SyncMode.COPY_AND_DELETE -> "Move files after successful sync"
+                                            SyncMode.MIRROR -> "Compare files, skip duplicates"
+                                            SyncMode.SYNC -> "Handle duplicate names intelligently"
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    SyncDirection.PC_TO_ANDROID -> {
+                        Text("💻→📱 PC to Android Mode:", fontWeight = FontWeight.Bold)
+                        SyncMode.values().forEach { mode ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                RadioButton(
+                                    selected = pcToAndroidMode == mode,
+                                    onClick = { pcToAndroidMode = mode }
+                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = mode.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() },
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = when (mode) {
+                                            SyncMode.COPY_AND_DELETE -> "Move files after successful sync"
+                                            SyncMode.MIRROR -> "Compare files, skip duplicates"
+                                            SyncMode.SYNC -> "Handle duplicate names intelligently"
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val updatedFolder = folder.copy(
+                        androidToPcMode = androidToPcMode,
+                        pcToAndroidMode = pcToAndroidMode
+                    )
+                    onSave(updatedFolder)
+                }
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
