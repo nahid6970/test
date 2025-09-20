@@ -37,7 +37,17 @@ data class SyncStatus(
     val currentFile: String = "",
     val filesProcessed: Int = 0,
     val totalFiles: Int = 0,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val syncSummary: SyncSummary? = null
+)
+
+data class SyncSummary(
+    val uploadedFiles: List<String> = emptyList(),
+    val downloadedFiles: List<String> = emptyList(),
+    val updatedFiles: List<String> = emptyList(),
+    val deletedFiles: List<String> = emptyList(),
+    val skippedFiles: List<String> = emptyList(),
+    val failedFiles: List<String> = emptyList()
 )
 
 enum class SyncState {

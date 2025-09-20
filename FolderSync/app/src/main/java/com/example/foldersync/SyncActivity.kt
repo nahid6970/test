@@ -285,6 +285,62 @@ fun SyncFolderProgressCard(
                     color = MaterialTheme.colorScheme.error
                 )
             }
+            
+            // Show detailed sync summary when completed
+            if (status.status == SyncState.COMPLETED && status.syncSummary != null) {
+                val summary = status.syncSummary
+                val totalOperations = summary.uploadedFiles.size + summary.downloadedFiles.size + 
+                                    summary.updatedFiles.size + summary.deletedFiles.size
+                
+                if (totalOperations > 0) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Sync Summary:",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    if (summary.uploadedFiles.isNotEmpty()) {
+                        Text(
+                            text = "📱→💻 Uploaded: ${summary.uploadedFiles.joinToString(", ")}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    
+                    if (summary.downloadedFiles.isNotEmpty()) {
+                        Text(
+                            text = "💻→📱 Downloaded: ${summary.downloadedFiles.joinToString(", ")}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    
+                    if (summary.updatedFiles.isNotEmpty()) {
+                        Text(
+                            text = "🔄 Updated: ${summary.updatedFiles.joinToString(", ")}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                    
+                    if (summary.deletedFiles.isNotEmpty()) {
+                        Text(
+                            text = "🗑️ Deleted: ${summary.deletedFiles.joinToString(", ")}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    
+                    if (summary.skippedFiles.isNotEmpty()) {
+                        Text(
+                            text = "⏭️ Skipped: ${summary.skippedFiles.take(3).joinToString(", ")}${if (summary.skippedFiles.size > 3) " and ${summary.skippedFiles.size - 3} more" else ""}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -321,6 +377,13 @@ suspend fun startSync(
                 var failedOperations = 0
                 val failedFiles = mutableListOf<String>()
                 
+                // Track sync operations for summary
+                val uploadedFiles = mutableListOf<String>()
+                val downloadedFiles = mutableListOf<String>()
+                val updatedFiles = mutableListOf<String>()
+                val deletedFiles = mutableListOf<String>()
+                val skippedFiles = mutableListOf<String>()
+                
                 // Handle Android to PC sync
                 if (folder.syncDirection == SyncDirection.ANDROID_TO_PC) {
                     val androidFiles = scanAndroidFolder(context, folder)
@@ -338,13 +401,14 @@ suspend fun startSync(
                     
                     // Only count files that actually need to be processed (exclude SKIP actions)
                     val filesToSync = allFilesToSync.filter { it.action != SyncAction.SKIP }
-                    val skippedFiles = allFilesToSync.filter { it.action == SyncAction.SKIP }
                     
                     totalOperations += filesToSync.size
                     
-                    // Log skipped files and summary
-                    skippedFiles.forEach { skipped ->
-                        android.util.Log.i("FolderSync", "⏭️ Skipped file: ${skipped.androidFile?.name} (already exists or conflict)")
+                    // Log skipped files and add to summary
+                    allFilesToSync.filter { it.action == SyncAction.SKIP }.forEach { skipped ->
+                        val fileName = skipped.androidFile?.name ?: "unknown"
+                        skippedFiles.add(fileName)
+                        android.util.Log.i("FolderSync", "⏭️ Skipped file: $fileName (already exists or conflict)")
                     }
                     
                     val uploadCount = filesToSync.count { it.action == SyncAction.UPLOAD }
@@ -397,6 +461,7 @@ suspend fun startSync(
                                         if (androidFile != null) {
                                             uploadFileToServer(context, serverUrl, folder, androidFile, isUpdate = false)
                                             completedOperations++
+                                            uploadedFiles.add(androidFile.name)
                                             
                                             // Handle post-sync actions based on sync mode
                                             if (folder.androidToPcMode == SyncMode.COPY_AND_DELETE) {
@@ -418,6 +483,7 @@ suspend fun startSync(
                                             // Update = Upload new version (will overwrite existing)
                                             uploadFileToServer(context, serverUrl, folder, androidFile, isUpdate = true)
                                             completedOperations++
+                                            updatedFiles.add("📱→💻 ${androidFile.name}")
                                             android.util.Log.i("FolderSync", "Successfully updated PC file: ${androidFile.name}")
                                         } else {
                                             android.util.Log.e("FolderSync", "UPDATE action but androidFile is null")
@@ -429,6 +495,7 @@ suspend fun startSync(
                                             // Delete file from PC server
                                             deleteFileFromServer(serverUrl, folder, fileToSync.pcFile!!)
                                             completedOperations++
+                                            deletedFiles.add("💻 ${fileToSync.pcFile.path}")
                                             android.util.Log.i("FolderSync", "Successfully deleted from PC: ${fileToSync.pcFile.path}")
                                         } catch (deleteException: Exception) {
                                             failedOperations++
@@ -470,13 +537,14 @@ suspend fun startSync(
                     
                     // Only count files that actually need to be processed (exclude SKIP actions)
                     val filesToSync = allFilesToSync.filter { it.action != SyncAction.SKIP }
-                    val skippedFiles = allFilesToSync.filter { it.action == SyncAction.SKIP }
                     
                     totalOperations += filesToSync.size
                     
-                    // Log skipped files and summary
-                    skippedFiles.forEach { skipped ->
-                        android.util.Log.i("FolderSync", "⏭️ Skipped file: ${skipped.pcFile?.path} (already exists or conflict)")
+                    // Log skipped files and add to summary
+                    allFilesToSync.filter { it.action == SyncAction.SKIP }.forEach { skipped ->
+                        val fileName = skipped.pcFile?.path ?: "unknown"
+                        skippedFiles.add(fileName)
+                        android.util.Log.i("FolderSync", "⏭️ Skipped file: $fileName (already exists or conflict)")
                     }
                     
                     val downloadCount = filesToSync.count { it.action == SyncAction.DOWNLOAD }
@@ -511,6 +579,7 @@ suspend fun startSync(
                                         if (pcFile != null) {
                                             downloadFileFromServer(context, serverUrl, folder, pcFile, isUpdate = false)
                                             completedOperations++
+                                            downloadedFiles.add(pcFile.path)
                                             
                                             // Handle post-sync actions based on sync mode
                                             if (folder.pcToAndroidMode == SyncMode.COPY_AND_DELETE) {
@@ -532,6 +601,7 @@ suspend fun startSync(
                                             // Update = Download new version (will overwrite existing)
                                             downloadFileFromServer(context, serverUrl, folder, pcFile, isUpdate = true)
                                             completedOperations++
+                                            updatedFiles.add("💻→📱 ${pcFile.path}")
                                             android.util.Log.i("FolderSync", "Successfully updated Android file: ${pcFile.path}")
                                         } else {
                                             android.util.Log.e("FolderSync", "UPDATE action but pcFile is null")
@@ -545,6 +615,7 @@ suspend fun startSync(
                                             if (androidFile != null) {
                                                 deleteFileFromAndroid(context, androidFile)
                                                 completedOperations++
+                                                deletedFiles.add("📱 ${androidFile.name}")
                                                 android.util.Log.i("FolderSync", "Successfully deleted from Android: ${androidFile.name}")
                                             } else {
                                                 android.util.Log.e("FolderSync", "DELETE action but androidFile is null")
@@ -573,19 +644,31 @@ suspend fun startSync(
                     }
                 }
                 
+                // Create sync summary
+                val syncSummary = SyncSummary(
+                    uploadedFiles = uploadedFiles,
+                    downloadedFiles = downloadedFiles,
+                    updatedFiles = updatedFiles,
+                    deletedFiles = deletedFiles,
+                    skippedFiles = skippedFiles,
+                    failedFiles = failedFiles
+                )
+                
                 // Update final status based on results
                 if (totalOperations == 0) {
                     statuses[index] = statuses[index].copy(
                         status = SyncState.COMPLETED,
                         progress = 1f,
-                        currentFile = "No files to sync"
+                        currentFile = "No files to sync",
+                        syncSummary = syncSummary
                     )
                 } else if (failedOperations == 0) {
                     statuses[index] = statuses[index].copy(
                         status = SyncState.COMPLETED,
                         progress = 1f,
                         filesProcessed = completedOperations,
-                        currentFile = ""
+                        currentFile = "",
+                        syncSummary = syncSummary
                     )
                 } else if (completedOperations > 0) {
                     statuses[index] = statuses[index].copy(
@@ -593,7 +676,8 @@ suspend fun startSync(
                         progress = 1f,
                         filesProcessed = completedOperations,
                         currentFile = "",
-                        errorMessage = "Failed: ${failedOperations}/${totalOperations} operations. ${failedFiles.take(2).joinToString(", ")}${if (failedFiles.size > 2) "..." else ""}"
+                        errorMessage = "Failed: ${failedOperations}/${totalOperations} operations. ${failedFiles.take(2).joinToString(", ")}${if (failedFiles.size > 2) "..." else ""}",
+                        syncSummary = syncSummary
                     )
                 } else {
                     statuses[index] = statuses[index].copy(
@@ -601,7 +685,8 @@ suspend fun startSync(
                         progress = 1f,
                         filesProcessed = 0,
                         currentFile = "",
-                        errorMessage = "Failed all ${failedOperations} operations"
+                        errorMessage = "Failed all ${failedOperations} operations",
+                        syncSummary = syncSummary
                     )
                 }
                 onStatusUpdate(statuses.toList())
