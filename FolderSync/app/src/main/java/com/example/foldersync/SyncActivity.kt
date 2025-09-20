@@ -348,9 +348,18 @@ suspend fun startSync(
                             onStatusUpdate(statuses.toList())
                             
                             try {
-                                // Always use rclone (it's now the default and only method)
-                                uploadFileWithRclone(context, serverUrl, folder, file)
+                                uploadFileToServer(context, serverUrl, folder, file)
                                 completedOperations++
+                                
+                                // Handle post-sync actions based on sync mode
+                                if (folder.androidToPcMode == SyncMode.COPY_AND_DELETE) {
+                                    try {
+                                        deleteFileFromAndroid(context, file)
+                                        android.util.Log.i("FolderSync", "Successfully uploaded and deleted: ${file.name}")
+                                    } catch (e: Exception) {
+                                        android.util.Log.w("FolderSync", "Upload succeeded but failed to delete ${file.name}: ${e.message}")
+                                    }
+                                }
                                 
                             } catch (uploadException: Exception) {
                                 failedOperations++
@@ -363,63 +372,15 @@ suspend fun startSync(
                     }
                 }
                 
-                // Handle PC to Android sync
+                // Handle PC to Android sync (placeholder for future implementation)
                 if (folder.syncDirection == SyncDirection.PC_TO_ANDROID) {
+                    // TODO: Implement PC to Android sync
+                    // This would require the server to send files to Android
                     statuses[index] = statuses[index].copy(
-                        status = SyncState.SCANNING,
-                        currentFile = "💻→📱 Scanning PC folder..."
+                        currentFile = "💻→📱 PC to Android sync not yet implemented"
                     )
                     onStatusUpdate(statuses.toList())
-                    
-                    try {
-                        // Get list of files from PC folder
-                        val pcFiles = getPcFileList(context, serverUrl, folder)
-                        
-                        if (pcFiles.isEmpty()) {
-                            statuses[index] = statuses[index].copy(
-                                status = SyncState.COMPLETED,
-                                progress = 1f,
-                                currentFile = "No files found in PC folder"
-                            )
-                            onStatusUpdate(statuses.toList())
-                        } else {
-                            totalOperations += pcFiles.size
-                            
-                            statuses[index] = statuses[index].copy(
-                                status = SyncState.SYNCING,
-                                totalFiles = totalOperations,
-                                currentFile = "💻→📱 Downloading from PC..."
-                            )
-                            onStatusUpdate(statuses.toList())
-                            
-                            // Download each file from PC to Android
-                            pcFiles.forEachIndexed { fileIndex, pcFile ->
-                                statuses[index] = statuses[index].copy(
-                                    progress = completedOperations.toFloat() / totalOperations,
-                                    filesProcessed = completedOperations,
-                                    currentFile = "💻→📱 ${pcFile.relativePath}"
-                                )
-                                onStatusUpdate(statuses.toList())
-                                
-                                try {
-                                    downloadPcFileToAndroid(context, serverUrl, folder, pcFile)
-                                    completedOperations++
-                                    
-                                } catch (downloadException: Exception) {
-                                    failedOperations++
-                                    failedFiles.add("💻→📱 ${pcFile.name}")
-                                    android.util.Log.e("FolderSync", "Download failed for ${pcFile.name}: ${downloadException.message}")
-                                }
-                                
-                                delay(100)
-                            }
-                        }
-                        
-                    } catch (e: Exception) {
-                        failedOperations++
-                        failedFiles.add("💻→📱 PC folder scan failed")
-                        android.util.Log.e("FolderSync", "PC to Android sync failed: ${e.message}")
-                    }
+                    delay(500)
                 }
                 
                 // Update final status based on results
@@ -484,13 +445,6 @@ data class AndroidFile(
     val uri: android.net.Uri,
     val size: Long,
     val relativePath: String = "" // Path relative to the root sync folder
-)
-
-data class PcFile(
-    val name: String,
-    val relativePath: String,
-    val size: Long,
-    val modified: Long
 )
 
 suspend fun scanAndroidFolder(context: Context, folder: SyncFolder): List<AndroidFile> {
@@ -621,12 +575,21 @@ suspend fun uploadFileToServer(context: Context, serverUrl: String, folder: Sync
                 "${file.relativePath}/$actualFileName"
             }
             
-            // Legacy upload - now using basic parameters since rclone is the default
+            // Determine sync behavior based on sync mode
+            val syncMode = folder.androidToPcMode
+            val handleDuplicates = when (syncMode) {
+                SyncMode.COPY_AND_DELETE -> false  // Overwrite duplicates
+                SyncMode.MIRROR -> false           // Skip duplicates (handled by server)
+                SyncMode.SYNC -> true              // Handle duplicate names intelligently
+            }
+            
             val multipartBody = okhttp3.MultipartBody.Builder()
                 .setType(okhttp3.MultipartBody.FORM)
                 .addFormDataPart("file", actualFileName, requestBody)
                 .addFormDataPart("original_filename", fullFilePath) // Include relative path
                 .addFormDataPart("folder_path", folder.pcPath)
+                .addFormDataPart("handle_duplicates", handleDuplicates.toString())
+                .addFormDataPart("sync_mode", syncMode.name)
                 .addFormDataPart("file_size", fileSize.toString())
                 .build()
             
@@ -745,259 +708,5 @@ suspend fun deleteFileFromAndroid(context: Context, file: AndroidFile) = withCon
         throw Exception("Permission denied to delete file")
     } catch (e: Exception) {
         throw Exception("Delete failed: ${e.message}")
-    }
-}
-
-suspend fun uploadFileWithRclone(context: Context, serverUrl: String, folder: SyncFolder, file: AndroidFile) = withContext(kotlinx.coroutines.Dispatchers.IO) {
-    try {
-        // Validate inputs
-        if (file.name.isBlank()) {
-            throw Exception("File name is empty")
-        }
-        
-        if (folder.pcPath.isBlank()) {
-            throw Exception("PC path is empty")
-        }
-        
-        // Create temporary file for rclone processing
-        val inputStream = context.contentResolver.openInputStream(file.uri)
-            ?: throw Exception("Cannot open file: ${file.name}")
-        
-        val tempFile = java.io.File(context.cacheDir, file.name.replace("/", "_"))
-        
-        try {
-            inputStream.use { input ->
-                java.io.FileOutputStream(tempFile).use { output ->
-                    input.copyTo(output)
-                }
-            }
-            
-            if (!tempFile.exists() || tempFile.length() == 0L) {
-                throw Exception("Failed to create temporary file or file is empty")
-            }
-            
-            // Create HTTP client for rclone API
-            val client = okhttp3.OkHttpClient.Builder()
-                .connectTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-                .writeTimeout(300, java.util.concurrent.TimeUnit.SECONDS)
-                .readTimeout(300, java.util.concurrent.TimeUnit.SECONDS)
-                .retryOnConnectionFailure(true)
-                .build()
-            
-            // Build the full file path including subdirectories
-            val fullFilePath = if (file.relativePath.isEmpty()) {
-                file.name
-            } else {
-                "${file.relativePath}/${file.name}"
-            }
-            
-            // Create request body from temp file
-            val requestBody = tempFile.asRequestBody("application/octet-stream".toMediaType())
-            
-            val multipartBody = okhttp3.MultipartBody.Builder()
-                .setType(okhttp3.MultipartBody.FORM)
-                .addFormDataPart("file", file.name, requestBody)
-                .addFormDataPart("original_filename", fullFilePath)
-                .addFormDataPart("folder_path", folder.pcPath)
-                .addFormDataPart("use_rclone", "true")
-                .addFormDataPart("rclone_command", folder.rcloneCommand.name.lowercase())
-                .addFormDataPart("rclone_flags", folder.rcloneFlags)
-                .addFormDataPart("sync_direction", folder.syncDirection.name)
-                .addFormDataPart("file_size", file.size.toString())
-                .build()
-            
-            val request = okhttp3.Request.Builder()
-                .url("$serverUrl/api/rclone-sync")
-                .post(multipartBody)
-                .addHeader("Connection", "keep-alive")
-                .build()
-            
-            // Execute request
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    val errorBody = response.body?.string() ?: "Unknown rclone error"
-                    throw Exception("Rclone sync error: HTTP ${response.code} - $errorBody")
-                }
-                
-                android.util.Log.i("FolderSync", "Successfully synced with rclone: ${file.name}")
-            }
-            
-        } finally {
-            // Clean up temp file
-            if (tempFile.exists()) {
-                tempFile.delete()
-            }
-        }
-        
-    } catch (e: java.net.SocketTimeoutException) {
-        throw Exception("${file.name}: Rclone sync timeout")
-    } catch (e: java.net.UnknownHostException) {
-        throw Exception("${file.name}: Cannot reach rclone server")
-    } catch (e: java.io.IOException) {
-        throw Exception("${file.name}: Rclone network error - ${e.message}")
-    } catch (e: Exception) {
-        val errorMsg = e.message ?: "Unknown rclone error occurred"
-        throw Exception("${file.name}: $errorMsg")
-    }
-}
-
-suspend fun getPcFileList(context: Context, serverUrl: String, folder: SyncFolder): List<PcFile> = withContext(kotlinx.coroutines.Dispatchers.IO) {
-    try {
-        val client = okhttp3.OkHttpClient.Builder()
-            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-            .build()
-        
-        val requestBody = okhttp3.MultipartBody.Builder()
-            .setType(okhttp3.MultipartBody.FORM)
-            .addFormDataPart("pc_path", folder.pcPath)
-            .build()
-        
-        val request = okhttp3.Request.Builder()
-            .url("$serverUrl/api/list-pc-files")
-            .post(requestBody)
-            .build()
-        
-        client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                val errorBody = response.body?.string() ?: "Unknown error"
-                throw Exception("Failed to get PC file list: HTTP ${response.code} - $errorBody")
-            }
-            
-            val responseBody = response.body?.string() ?: throw Exception("Empty response")
-            val jsonResponse = org.json.JSONObject(responseBody)
-            
-            if (jsonResponse.has("error")) {
-                throw Exception(jsonResponse.getString("error"))
-            }
-            
-            val filesArray = jsonResponse.getJSONArray("files")
-            val pcFiles = mutableListOf<PcFile>()
-            
-            for (i in 0 until filesArray.length()) {
-                val fileObj = filesArray.getJSONObject(i)
-                val pcFile = PcFile(
-                    name = fileObj.getString("name"),
-                    relativePath = fileObj.getString("relative_path"),
-                    size = fileObj.getLong("size"),
-                    modified = fileObj.getLong("modified")
-                )
-                android.util.Log.d("FolderSync", "PC File: name='${pcFile.name}', relativePath='${pcFile.relativePath}'")
-                pcFiles.add(pcFile)
-            }
-            
-            android.util.Log.i("FolderSync", "Found ${pcFiles.size} files in PC folder: ${folder.pcPath}")
-            return@withContext pcFiles
-        }
-        
-    } catch (e: Exception) {
-        android.util.Log.e("FolderSync", "Error getting PC file list: ${e.message}")
-        throw Exception("Failed to get PC file list: ${e.message}")
-    }
-}
-
-suspend fun downloadPcFileToAndroid(context: Context, serverUrl: String, folder: SyncFolder, pcFile: PcFile) = withContext(kotlinx.coroutines.Dispatchers.IO) {
-    try {
-        val client = okhttp3.OkHttpClient.Builder()
-            .connectTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(300, java.util.concurrent.TimeUnit.SECONDS)
-            .build()
-        
-        android.util.Log.d("FolderSync", "Downloading PC file - pc_path: '${folder.pcPath}', relative_file_path: '${pcFile.relativePath}'")
-        
-        val requestBody = okhttp3.MultipartBody.Builder()
-            .setType(okhttp3.MultipartBody.FORM)
-            .addFormDataPart("pc_path", folder.pcPath)
-            .addFormDataPart("relative_file_path", pcFile.relativePath)
-            .build()
-        
-        val request = okhttp3.Request.Builder()
-            .url("$serverUrl/api/download-pc-file")
-            .post(requestBody)
-            .build()
-        
-        client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                val errorBody = response.body?.string() ?: "Unknown error"
-                throw Exception("Download failed: HTTP ${response.code} - $errorBody")
-            }
-            
-            val inputStream = response.body?.byteStream() ?: throw Exception("No response body")
-            
-            // Save file to Android storage
-            saveFileToAndroid(context, folder, pcFile, inputStream)
-            
-            android.util.Log.i("FolderSync", "Successfully downloaded: ${pcFile.name}")
-        }
-        
-    } catch (e: Exception) {
-        android.util.Log.e("FolderSync", "Error downloading ${pcFile.name}: ${e.message}")
-        throw Exception("Download failed for ${pcFile.name}: ${e.message}")
-    }
-}
-
-suspend fun saveFileToAndroid(context: Context, folder: SyncFolder, pcFile: PcFile, inputStream: java.io.InputStream) = withContext(kotlinx.coroutines.Dispatchers.IO) {
-    try {
-        // Get the Android folder URI
-        val androidUri = folder.androidUri ?: throw Exception("Android folder URI not available")
-        
-        // Get DocumentFile for the Android folder
-        val androidFolder = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, androidUri)
-            ?: throw Exception("Cannot access Android folder")
-        
-        // Create subdirectory structure if needed
-        val relativePath = pcFile.relativePath
-        val targetFolder = if (relativePath.contains("/")) {
-            // Create subdirectories
-            val pathParts = relativePath.split("/")
-            val fileName = pathParts.last()
-            val dirParts = pathParts.dropLast(1)
-            
-            var currentFolder = androidFolder
-            for (dirPart in dirParts) {
-                val existingDir = currentFolder.findFile(dirPart)
-                currentFolder = if (existingDir != null && existingDir.isDirectory) {
-                    existingDir
-                } else {
-                    currentFolder.createDirectory(dirPart) ?: throw Exception("Cannot create directory: $dirPart")
-                }
-            }
-            currentFolder
-        } else {
-            androidFolder
-        }
-        
-        // Create the file
-        val fileName = pcFile.name
-        val mimeType = android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(
-            android.webkit.MimeTypeMap.getFileExtensionFromUrl(fileName)
-        ) ?: "application/octet-stream"
-        
-        // Check if file already exists
-        val existingFile = targetFolder.findFile(fileName)
-        val targetFile = if (existingFile != null) {
-            // Handle based on rclone flags
-            if (folder.flagIgnoreExisting) {
-                android.util.Log.i("FolderSync", "Skipping existing file: $fileName")
-                return@withContext
-            } else {
-                // Overwrite existing file (default rclone behavior)
-                existingFile.delete()
-                targetFolder.createFile(mimeType, fileName) ?: throw Exception("Cannot create file")
-            }
-        } else {
-            targetFolder.createFile(mimeType, fileName) ?: throw Exception("Cannot create file")
-        }
-        
-        // Write file content
-        context.contentResolver.openOutputStream(targetFile.uri)?.use { outputStream ->
-            inputStream.copyTo(outputStream)
-        } ?: throw Exception("Cannot open output stream")
-        
-        android.util.Log.i("FolderSync", "File saved to Android: ${targetFile.uri}")
-        
-    } catch (e: Exception) {
-        android.util.Log.e("FolderSync", "Error saving file to Android: ${e.message}")
-        throw Exception("Failed to save ${pcFile.name} to Android: ${e.message}")
     }
 }

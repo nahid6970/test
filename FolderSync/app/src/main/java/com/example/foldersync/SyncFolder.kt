@@ -11,36 +11,12 @@ data class SyncFolder(
     val isEnabled: Boolean = true,
     val lastSyncTime: Long = 0L,
     val syncDirection: SyncDirection = SyncDirection.ANDROID_TO_PC,
-    // Rclone is now the default sync method
-    val rcloneCommand: RcloneCommand = RcloneCommand.SYNC,
-    // Individual rclone flags as booleans
-    val flagProgress: Boolean = true,
-    val flagTransfers4: Boolean = true,
-    val flagCheckers8: Boolean = true,
-    val flagContimeout60s: Boolean = true,
-    val flagTimeout300s: Boolean = true,
-    val flagRetries3: Boolean = true,
-    val flagIgnoreExisting: Boolean = false,
-    val flagTrackRenames: Boolean = false,
-    val flagFastList: Boolean = false
+    val androidToPcMode: SyncMode = SyncMode.COPY_AND_DELETE,
+    val pcToAndroidMode: SyncMode = SyncMode.COPY_AND_DELETE
 ) {
     // Helper property to get Uri from String
     val androidUri: Uri?
         get() = androidUriString?.let { Uri.parse(it) }
-    
-    // Helper property to build rclone flags string
-    val rcloneFlags: String
-        get() = buildString {
-            if (flagProgress) append(" --progress")
-            if (flagTransfers4) append(" --transfers=4")
-            if (flagCheckers8) append(" --checkers=8")
-            if (flagContimeout60s) append(" --contimeout=60s")
-            if (flagTimeout300s) append(" --timeout=300s")
-            if (flagRetries3) append(" --retries=3")
-            if (flagIgnoreExisting) append(" --ignore-existing")
-            if (flagTrackRenames) append(" --track-renames")
-            if (flagFastList) append(" --fast-list")
-        }.trim()
 }
 
 enum class SyncDirection {
@@ -48,12 +24,11 @@ enum class SyncDirection {
     PC_TO_ANDROID
 }
 
-enum class RcloneCommand {
-    SYNC,  // Make destination identical to source
-    COPY   // Copy files from source to destination
+enum class SyncMode {
+    COPY_AND_DELETE,  // Move files after successful sync
+    MIRROR,           // Compare files, don't copy duplicates
+    SYNC              // Like mirror but handle duplicate names differently
 }
-
-
 
 data class SyncStatus(
     val folderId: String,
