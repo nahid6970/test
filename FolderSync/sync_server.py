@@ -301,11 +301,13 @@ def download_file(filename):
 
 @app.route('/api/delete/<path:filename>', methods=['DELETE'])
 def delete_file(filename):
-    """Delete a file from PC"""
+    """Delete a file from PC (for Mirror mode)"""
     try:
         folder_path = request.args.get('folder_path', '')
         if not folder_path:
             return jsonify({'error': 'folder_path is required'}), 400
+        
+        print(f"🗑️ Delete request - folder: '{folder_path}', file: '{filename}'")
         
         # Handle both absolute and relative paths
         if os.path.isabs(folder_path):
@@ -313,27 +315,124 @@ def delete_file(filename):
         else:
             target_folder = os.path.join(SYNC_BASE_FOLDER, folder_path)
         
-        # Security check for relative paths only
+        # Build full file path (handle subdirectories)
         file_path = os.path.join(target_folder, filename)
+        
+        # Security check for relative paths only
         if not os.path.isabs(folder_path):
             if not os.path.abspath(file_path).startswith(os.path.abspath(SYNC_BASE_FOLDER)):
+                print(f"❌ Security check failed for: {file_path}")
                 return jsonify({'error': 'Invalid file path'}), 400
         
+        print(f"🔍 Attempting to delete: {file_path}")
+        
         if not os.path.exists(file_path):
+            print(f"⚠️ File not found: {file_path}")
             return jsonify({'error': 'File not found'}), 404
+        
+        if os.path.isdir(file_path):
+            print(f"❌ Cannot delete directory: {file_path}")
+            return jsonify({'error': 'Cannot delete directory, only files'}), 400
+        
+        # Get file info before deletion
+        file_size = os.path.getsize(file_path)
         
         # Delete the file
         os.remove(file_path)
         
-        print(f"🗑️ Deleted file: {filename}")
+        print(f"✅ Successfully deleted: {filename} ({file_size} bytes)")
+        
+        # Try to remove empty parent directories (cleanup)
+        try:
+            parent_dir = os.path.dirname(file_path)
+            if parent_dir != target_folder and os.path.exists(parent_dir):
+                if not os.listdir(parent_dir):  # Directory is empty
+                    os.rmdir(parent_dir)
+                    print(f"🧹 Cleaned up empty directory: {os.path.basename(parent_dir)}")
+        except:
+            pass  # Ignore cleanup errors
         
         return jsonify({
             'success': True,
-            'message': f'File {filename} deleted successfully'
+            'message': f'File {filename} deleted successfully',
+            'size': file_size
+        })
+    
+    except PermissionError:
+        print(f"❌ Permission denied deleting: {filename}")
+        return jsonify({'error': 'Permission denied - file may be in use'}), 403
+    except Exception as e:
+        print(f"❌ Delete error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/delete-multiple', methods=['POST'])
+def delete_multiple_files():
+    """Delete multiple files from PC (for efficient Mirror mode)"""
+    try:
+        data = request.get_json()
+        folder_path = data.get('folder_path', '')
+        files_to_delete = data.get('files', [])
+        
+        if not folder_path:
+            return jsonify({'error': 'folder_path is required'}), 400
+        
+        if not files_to_delete:
+            return jsonify({'error': 'files list is required'}), 400
+        
+        print(f"🗑️ Bulk delete request - folder: '{folder_path}', {len(files_to_delete)} files")
+        
+        # Handle both absolute and relative paths
+        if os.path.isabs(folder_path):
+            target_folder = folder_path
+        else:
+            target_folder = os.path.join(SYNC_BASE_FOLDER, folder_path)
+        
+        deleted_files = []
+        failed_files = []
+        total_size = 0
+        
+        for filename in files_to_delete:
+            try:
+                file_path = os.path.join(target_folder, filename)
+                
+                # Security check for relative paths only
+                if not os.path.isabs(folder_path):
+                    if not os.path.abspath(file_path).startswith(os.path.abspath(SYNC_BASE_FOLDER)):
+                        failed_files.append({'file': filename, 'error': 'Invalid file path'})
+                        continue
+                
+                if not os.path.exists(file_path):
+                    failed_files.append({'file': filename, 'error': 'File not found'})
+                    continue
+                
+                if os.path.isdir(file_path):
+                    failed_files.append({'file': filename, 'error': 'Cannot delete directory'})
+                    continue
+                
+                file_size = os.path.getsize(file_path)
+                os.remove(file_path)
+                
+                deleted_files.append(filename)
+                total_size += file_size
+                print(f"✅ Deleted: {filename} ({file_size} bytes)")
+                
+            except Exception as e:
+                failed_files.append({'file': filename, 'error': str(e)})
+                print(f"❌ Failed to delete {filename}: {e}")
+        
+        print(f"📊 Bulk delete completed: {len(deleted_files)} deleted, {len(failed_files)} failed")
+        
+        return jsonify({
+            'success': True,
+            'deleted_files': deleted_files,
+            'failed_files': failed_files,
+            'total_deleted': len(deleted_files),
+            'total_failed': len(failed_files),
+            'total_size': total_size
         })
     
     except Exception as e:
-        print(f"❌ Delete error: {e}")
+        print(f"❌ Bulk delete error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/sync/start', methods=['POST'])
@@ -432,6 +531,8 @@ if __name__ == "__main__":
     print(f"📁 Sync base folder: {SYNC_BASE_FOLDER}")
     print(f"🌐 Server will be available at: http://localhost:5016")
     print(f"💡 Make sure your Android device is on the same network")
+    print(f"🔄 Features: Upload, Download, Delete (Mirror mode supported)")
+    print(f"🗑️ Mirror mode will add/remove files to keep folders identical")
     
     # Optimized server settings for better performance
     app.run(
