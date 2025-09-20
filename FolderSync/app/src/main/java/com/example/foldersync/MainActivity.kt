@@ -87,7 +87,7 @@ fun MainScreen(
     val sharedPrefs = context.getSharedPreferences("folder_sync_prefs", Context.MODE_PRIVATE)
     
     var serverUrl by remember { 
-        mutableStateOf(sharedPrefs.getString("server_url", "http://192.168.1.100:5016") ?: "http://192.168.1.100:5016") 
+        mutableStateOf(sharedPrefs.getString("server_url", "http://192.168.0.101:5016") ?: "http://192.168.0.101:5016") 
     }
     var syncFolders by remember { mutableStateOf(loadSyncFolders(context)) }
     var showSettings by remember { mutableStateOf(false) }
@@ -363,12 +363,12 @@ fun SettingsDialog(
                     value = tempUrl,
                     onValueChange = { tempUrl = it },
                     label = { Text("Server URL") },
-                    placeholder = { Text("http://192.168.1.100:5016") },
+                    placeholder = { Text("http://192.168.0.101:5016") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Example: http://192.168.1.100:5016",
+                    text = "Example: http://192.168.0.101:5016",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

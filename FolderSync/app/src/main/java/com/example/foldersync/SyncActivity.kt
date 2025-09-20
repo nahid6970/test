@@ -304,7 +304,7 @@ suspend fun startSync(
     try {
         // Get server URL from preferences
         val sharedPrefs = context.getSharedPreferences("folder_sync_prefs", Context.MODE_PRIVATE)
-        val serverUrl = sharedPrefs.getString("server_url", "http://192.168.1.100:5016") ?: "http://192.168.1.100:5016"
+        val serverUrl = sharedPrefs.getString("server_url", "http://192.168.0.101:5016") ?: "http://192.168.0.101:5016"
         
         folders.forEachIndexed { index, folder ->
             try {
