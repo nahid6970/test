@@ -306,31 +306,17 @@ fun SyncFolderCard(
                         color = MaterialTheme.colorScheme.primary
                     )
                     
-                    // Show sync options in a compact format
-                    val syncOptionsText = if (folder.useRclone) {
-                        val directionIcon = when(folder.syncDirection) {
-                            SyncDirection.ANDROID_TO_PC -> "📱→💻"
-                            SyncDirection.PC_TO_ANDROID -> "💻→📱"
-                        }
-                        "$directionIcon 🚀 Rclone: ${folder.rcloneFlags.take(30)}${if (folder.rcloneFlags.length > 30) "..." else ""}"
-                    } else {
-                        when(folder.syncDirection) {
-                            SyncDirection.ANDROID_TO_PC -> {
-                                val options = mutableListOf<String>()
-                                if (folder.deleteAfterTransfer) options.add("Delete after transfer")
-                                if (folder.moveDuplicatesToFolder) options.add("Move duplicates")
-                                if (folder.skipExistingFiles) options.add("Skip existing")
-                                "📱→💻 ${options.joinToString(", ")}"
-                            }
-                            SyncDirection.PC_TO_ANDROID -> {
-                                val options = mutableListOf<String>()
-                                if (folder.pcToAndroidDeleteAfterTransfer) options.add("Delete after transfer")
-                                if (folder.pcToAndroidMoveDuplicatesToFolder) options.add("Move duplicates")
-                                if (folder.pcToAndroidSkipExistingFiles) options.add("Skip existing")
-                                "💻→📱 ${options.joinToString(", ")}"
-                            }
-                        }
+                    // Show rclone sync information
+                    val directionIcon = when(folder.syncDirection) {
+                        SyncDirection.ANDROID_TO_PC -> "📱→💻"
+                        SyncDirection.PC_TO_ANDROID -> "💻→📱"
                     }
+                    val commandText = when(folder.rcloneCommand) {
+                        RcloneCommand.SYNC -> "sync"
+                        RcloneCommand.COPY -> "copy"
+                    }
+                    val flagsText = folder.rcloneFlags.take(40) + if (folder.rcloneFlags.length > 40) "..." else ""
+                    val syncOptionsText = "$directionIcon 🚀 rclone $commandText $flagsText"
                     
                     Text(
                         text = syncOptionsText,
@@ -551,15 +537,28 @@ fun AdvancedSettingsDialog(
     onSave: (SyncFolder) -> Unit,
     onDismiss: () -> Unit
 ) {
-    // State for rclone options
-    var useRclone by remember { mutableStateOf(folder.useRclone) }
-    var rcloneFlags by remember { mutableStateOf(folder.rcloneFlags) }
+    // State for rclone command
+    var rcloneCommand by remember { mutableStateOf(folder.rcloneCommand) }
+    
+    // State for individual flags
+    var flagProgress by remember { mutableStateOf(folder.flagProgress) }
+    var flagTransfers4 by remember { mutableStateOf(folder.flagTransfers4) }
+    var flagCheckers8 by remember { mutableStateOf(folder.flagCheckers8) }
+    var flagContimeout60s by remember { mutableStateOf(folder.flagContimeout60s) }
+    var flagTimeout300s by remember { mutableStateOf(folder.flagTimeout300s) }
+    var flagRetries3 by remember { mutableStateOf(folder.flagRetries3) }
+    var flagIgnoreExisting by remember { mutableStateOf(folder.flagIgnoreExisting) }
+    var flagTrackRenames by remember { mutableStateOf(folder.flagTrackRenames) }
+    var flagFastList by remember { mutableStateOf(folder.flagFastList) }
     
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Advanced Sync Settings") },
+        title = { Text("Rclone Sync Settings") },
         text = {
             Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 600.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
@@ -568,58 +567,145 @@ fun AdvancedSettingsDialog(
                     color = MaterialTheme.colorScheme.primary
                 )
                 
-                // Rclone Integration Toggle
+                Text(
+                    text = "Direction: ${when(folder.syncDirection) {
+                        SyncDirection.ANDROID_TO_PC -> "Android to PC"
+                        SyncDirection.PC_TO_ANDROID -> "PC to Android"
+                    }}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Rclone Command Selection
+                Text("Rclone Command:", fontWeight = FontWeight.Bold)
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Switch(
-                        checked = useRclone,
-                        onCheckedChange = { useRclone = it }
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "🚀 Use Rclone",
-                            fontWeight = FontWeight.Bold
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        RadioButton(
+                            selected = rcloneCommand == RcloneCommand.SYNC,
+                            onClick = { rcloneCommand = RcloneCommand.SYNC }
                         )
-                        Text(
-                            text = "Advanced sync engine with extensive options",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        Column {
+                            Text("Sync", fontWeight = FontWeight.Medium)
+                            Text(
+                                "Make destination identical",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        RadioButton(
+                            selected = rcloneCommand == RcloneCommand.COPY,
+                            onClick = { rcloneCommand = RcloneCommand.COPY }
                         )
+                        Column {
+                            Text("Copy", fontWeight = FontWeight.Medium)
+                            Text(
+                                "Copy files to destination",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
                 
-                if (useRclone) {
-                    OutlinedTextField(
-                        value = rcloneFlags,
-                        onValueChange = { rcloneFlags = it },
-                        label = { Text("Rclone Flags") },
-                        placeholder = { Text("--progress --transfers=4") },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 2
-                    )
-                    Text(
-                        text = "💡 Common: --progress, --transfers=N, --delete-after, --update",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    Text(
-                        text = "📋 Using legacy sync method",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Rclone Flags
+                Text("Rclone Flags:", fontWeight = FontWeight.Bold)
+                
+                // Performance flags
+                FlagCheckbox(
+                    checked = flagProgress,
+                    onCheckedChange = { flagProgress = it },
+                    title = "--progress",
+                    description = "Show transfer progress"
+                )
+                
+                FlagCheckbox(
+                    checked = flagTransfers4,
+                    onCheckedChange = { flagTransfers4 = it },
+                    title = "--transfers=4",
+                    description = "Number of parallel transfers"
+                )
+                
+                FlagCheckbox(
+                    checked = flagCheckers8,
+                    onCheckedChange = { flagCheckers8 = it },
+                    title = "--checkers=8",
+                    description = "Number of checkers to run in parallel"
+                )
+                
+                // Timeout flags
+                FlagCheckbox(
+                    checked = flagContimeout60s,
+                    onCheckedChange = { flagContimeout60s = it },
+                    title = "--contimeout=60s",
+                    description = "Connection timeout"
+                )
+                
+                FlagCheckbox(
+                    checked = flagTimeout300s,
+                    onCheckedChange = { flagTimeout300s = it },
+                    title = "--timeout=300s",
+                    description = "IO idle timeout"
+                )
+                
+                FlagCheckbox(
+                    checked = flagRetries3,
+                    onCheckedChange = { flagRetries3 = it },
+                    title = "--retries=3",
+                    description = "Retry operations on failure"
+                )
+                
+                // Advanced flags
+                FlagCheckbox(
+                    checked = flagIgnoreExisting,
+                    onCheckedChange = { flagIgnoreExisting = it },
+                    title = "--ignore-existing",
+                    description = "Skip files that exist on destination"
+                )
+                
+                FlagCheckbox(
+                    checked = flagTrackRenames,
+                    onCheckedChange = { flagTrackRenames = it },
+                    title = "--track-renames",
+                    description = "Track file renames and do server-side moves"
+                )
+                
+                FlagCheckbox(
+                    checked = flagFastList,
+                    onCheckedChange = { flagFastList = it },
+                    title = "--fast-list",
+                    description = "Use recursive list if available"
+                )
             }
         },
         confirmButton = {
             TextButton(
                 onClick = {
                     val updatedFolder = folder.copy(
-                        useRclone = useRclone,
-                        rcloneFlags = rcloneFlags
+                        rcloneCommand = rcloneCommand,
+                        flagProgress = flagProgress,
+                        flagTransfers4 = flagTransfers4,
+                        flagCheckers8 = flagCheckers8,
+                        flagContimeout60s = flagContimeout60s,
+                        flagTimeout300s = flagTimeout300s,
+                        flagRetries3 = flagRetries3,
+                        flagIgnoreExisting = flagIgnoreExisting,
+                        flagTrackRenames = flagTrackRenames,
+                        flagFastList = flagFastList
                     )
                     onSave(updatedFolder)
                 }
@@ -633,4 +719,34 @@ fun AdvancedSettingsDialog(
             }
         }
     )
+}
+
+@Composable
+fun FlagCheckbox(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    title: String,
+    description: String
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontWeight = FontWeight.Medium,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
 }

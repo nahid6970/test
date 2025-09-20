@@ -348,23 +348,8 @@ suspend fun startSync(
                             onStatusUpdate(statuses.toList())
                             
                             try {
-                                if (folder.useRclone) {
-                                    // Use rclone for sync
-                                    uploadFileWithRclone(context, serverUrl, folder, file)
-                                } else {
-                                    // Use legacy upload method
-                                    uploadFileToServer(context, serverUrl, folder, file)
-                                    
-                                    // Handle post-sync actions based on sync options
-                                    if (folder.deleteAfterTransfer) {
-                                        try {
-                                            deleteFileFromAndroid(context, file)
-                                            android.util.Log.i("FolderSync", "Successfully uploaded and deleted: ${file.name}")
-                                        } catch (e: Exception) {
-                                            android.util.Log.w("FolderSync", "Upload succeeded but failed to delete ${file.name}: ${e.message}")
-                                        }
-                                    }
-                                }
+                                // Always use rclone (it's now the default and only method)
+                                uploadFileWithRclone(context, serverUrl, folder, file)
                                 completedOperations++
                                 
                             } catch (uploadException: Exception) {
@@ -636,19 +621,12 @@ suspend fun uploadFileToServer(context: Context, serverUrl: String, folder: Sync
                 "${file.relativePath}/$actualFileName"
             }
             
-            // Determine sync behavior based on sync options
-            val handleDuplicates = folder.moveDuplicatesToFolder
-            val skipExisting = folder.skipExistingFiles
-            val deleteAfterTransfer = folder.deleteAfterTransfer
-            
+            // Legacy upload - now using basic parameters since rclone is the default
             val multipartBody = okhttp3.MultipartBody.Builder()
                 .setType(okhttp3.MultipartBody.FORM)
                 .addFormDataPart("file", actualFileName, requestBody)
                 .addFormDataPart("original_filename", fullFilePath) // Include relative path
                 .addFormDataPart("folder_path", folder.pcPath)
-                .addFormDataPart("handle_duplicates", handleDuplicates.toString())
-                .addFormDataPart("skip_existing", skipExisting.toString())
-                .addFormDataPart("delete_after_transfer", deleteAfterTransfer.toString())
                 .addFormDataPart("file_size", fileSize.toString())
                 .build()
             
@@ -822,6 +800,7 @@ suspend fun uploadFileWithRclone(context: Context, serverUrl: String, folder: Sy
                 .addFormDataPart("original_filename", fullFilePath)
                 .addFormDataPart("folder_path", folder.pcPath)
                 .addFormDataPart("use_rclone", "true")
+                .addFormDataPart("rclone_command", folder.rcloneCommand.name.lowercase())
                 .addFormDataPart("rclone_flags", folder.rcloneFlags)
                 .addFormDataPart("sync_direction", folder.syncDirection.name)
                 .addFormDataPart("file_size", file.size.toString())
@@ -997,28 +976,12 @@ suspend fun saveFileToAndroid(context: Context, folder: SyncFolder, pcFile: PcFi
         // Check if file already exists
         val existingFile = targetFolder.findFile(fileName)
         val targetFile = if (existingFile != null) {
-            // Handle based on sync settings
-            if (folder.pcToAndroidSkipExistingFiles) {
+            // Handle based on rclone flags
+            if (folder.flagIgnoreExisting) {
                 android.util.Log.i("FolderSync", "Skipping existing file: $fileName")
                 return@withContext
-            } else if (folder.pcToAndroidMoveDuplicatesToFolder) {
-                // Create duplicate folder
-                var counter = 1
-                var dupFolder: androidx.documentfile.provider.DocumentFile
-                do {
-                    val dupFolderName = "dup$counter"
-                    val existingDupFolder = targetFolder.findFile(dupFolderName)
-                    dupFolder = if (existingDupFolder != null && existingDupFolder.isDirectory) {
-                        existingDupFolder
-                    } else {
-                        targetFolder.createDirectory(dupFolderName) ?: throw Exception("Cannot create duplicate folder")
-                    }
-                    counter++
-                } while (dupFolder.findFile(fileName) != null && counter < 100)
-                
-                dupFolder.createFile(mimeType, fileName) ?: throw Exception("Cannot create duplicate file")
             } else {
-                // Overwrite existing file
+                // Overwrite existing file (default rclone behavior)
                 existingFile.delete()
                 targetFolder.createFile(mimeType, fileName) ?: throw Exception("Cannot create file")
             }

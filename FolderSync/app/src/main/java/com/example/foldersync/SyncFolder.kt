@@ -11,26 +11,46 @@ data class SyncFolder(
     val isEnabled: Boolean = true,
     val lastSyncTime: Long = 0L,
     val syncDirection: SyncDirection = SyncDirection.ANDROID_TO_PC,
-    // Rclone integration
-    val useRclone: Boolean = false,
-    val rcloneFlags: String = "--progress --transfers=4 --checkers=8 --contimeout=60s --timeout=300s --retries=3",
-    // Legacy sync options (kept for backward compatibility)
-    val deleteAfterTransfer: Boolean = false,
-    val moveDuplicatesToFolder: Boolean = true,
-    val skipExistingFiles: Boolean = true,
-    // PC to Android sync options
-    val pcToAndroidDeleteAfterTransfer: Boolean = false,
-    val pcToAndroidMoveDuplicatesToFolder: Boolean = true,
-    val pcToAndroidSkipExistingFiles: Boolean = true
+    // Rclone is now the default sync method
+    val rcloneCommand: RcloneCommand = RcloneCommand.SYNC,
+    // Individual rclone flags as booleans
+    val flagProgress: Boolean = true,
+    val flagTransfers4: Boolean = true,
+    val flagCheckers8: Boolean = true,
+    val flagContimeout60s: Boolean = true,
+    val flagTimeout300s: Boolean = true,
+    val flagRetries3: Boolean = true,
+    val flagIgnoreExisting: Boolean = false,
+    val flagTrackRenames: Boolean = false,
+    val flagFastList: Boolean = false
 ) {
     // Helper property to get Uri from String
     val androidUri: Uri?
         get() = androidUriString?.let { Uri.parse(it) }
+    
+    // Helper property to build rclone flags string
+    val rcloneFlags: String
+        get() = buildString {
+            if (flagProgress) append(" --progress")
+            if (flagTransfers4) append(" --transfers=4")
+            if (flagCheckers8) append(" --checkers=8")
+            if (flagContimeout60s) append(" --contimeout=60s")
+            if (flagTimeout300s) append(" --timeout=300s")
+            if (flagRetries3) append(" --retries=3")
+            if (flagIgnoreExisting) append(" --ignore-existing")
+            if (flagTrackRenames) append(" --track-renames")
+            if (flagFastList) append(" --fast-list")
+        }.trim()
 }
 
 enum class SyncDirection {
     ANDROID_TO_PC,
     PC_TO_ANDROID
+}
+
+enum class RcloneCommand {
+    SYNC,  // Make destination identical to source
+    COPY   // Copy files from source to destination
 }
 
 

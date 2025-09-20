@@ -315,6 +315,7 @@ def rclone_sync():
         # Get form parameters
         original_filename = request.form.get('original_filename', file.filename)
         folder_path = request.form.get('folder_path', 'default')
+        rclone_command = request.form.get('rclone_command', 'sync')
         rclone_flags = request.form.get('rclone_flags', '--progress --transfers=4')
         sync_direction = request.form.get('sync_direction', 'ANDROID_TO_PC')
         file_size = request.form.get('file_size', '0')
@@ -367,9 +368,9 @@ def rclone_sync():
             
             # Build rclone command
             if sync_direction == 'ANDROID_TO_PC':
-                # For individual files, use rclone copy
+                # Use the specified rclone command (sync or copy)
                 rclone_cmd = [
-                    'rclone', 'copy',
+                    'rclone', rclone_command,
                     source_base,  # Source directory
                     target_dir,   # Target directory
                 ] + rclone_flags.split()
