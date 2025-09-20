@@ -16,6 +16,7 @@ import androidx.documentfile.provider.DocumentFile
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -372,15 +373,50 @@ suspend fun startSync(
                     }
                 }
                 
-                // Handle PC to Android sync (placeholder for future implementation)
+                // Handle PC to Android sync
                 if (folder.syncDirection == SyncDirection.PC_TO_ANDROID) {
-                    // TODO: Implement PC to Android sync
-                    // This would require the server to send files to Android
-                    statuses[index] = statuses[index].copy(
-                        currentFile = "💻→📱 PC to Android sync not yet implemented"
-                    )
-                    onStatusUpdate(statuses.toList())
-                    delay(500)
+                    val pcFiles = scanPcFolder(serverUrl, folder)
+                    totalOperations += pcFiles.size
+                    
+                    if (pcFiles.isNotEmpty()) {
+                        statuses[index] = statuses[index].copy(
+                            status = SyncState.SYNCING,
+                            totalFiles = totalOperations,
+                            currentFile = "Syncing PC → Android"
+                        )
+                        onStatusUpdate(statuses.toList())
+                        
+                        pcFiles.forEachIndexed { fileIndex, file ->
+                            statuses[index] = statuses[index].copy(
+                                progress = completedOperations.toFloat() / totalOperations,
+                                filesProcessed = completedOperations,
+                                currentFile = "💻→📱 ${file.path}"
+                            )
+                            onStatusUpdate(statuses.toList())
+                            
+                            try {
+                                downloadFileFromServer(context, serverUrl, folder, file)
+                                completedOperations++
+                                
+                                // Handle post-sync actions based on sync mode
+                                if (folder.pcToAndroidMode == SyncMode.COPY_AND_DELETE) {
+                                    try {
+                                        deleteFileFromServer(serverUrl, folder, file)
+                                        android.util.Log.i("FolderSync", "Successfully downloaded and deleted: ${file.path}")
+                                    } catch (e: Exception) {
+                                        android.util.Log.w("FolderSync", "Download succeeded but failed to delete ${file.path}: ${e.message}")
+                                    }
+                                }
+                                
+                            } catch (downloadException: Exception) {
+                                failedOperations++
+                                failedFiles.add("💻→📱 ${file.path}")
+                                android.util.Log.e("FolderSync", "Download failed for ${file.path}: ${downloadException.message}")
+                            }
+                            
+                            delay(100)
+                        }
+                    }
                 }
                 
                 // Update final status based on results
@@ -696,17 +732,175 @@ suspend fun deleteFileFromAndroid(context: Context, file: AndroidFile) = withCon
         val documentFile = androidx.documentfile.provider.DocumentFile.fromSingleUri(context, file.uri)
         if (documentFile != null && documentFile.exists() && documentFile.canWrite()) {
             if (documentFile.delete()) {
-                android.util.Log.i("FolderSync", "Successfully deleted: ${file.name}")
+                android.util.Log.i("FolderSync", "Successfully deleted file: ${file.name}")
             } else {
-                throw Exception("Failed to delete file (delete() returned false)")
+                throw Exception("Failed to delete file: ${file.name}")
             }
         } else {
-            throw Exception("File not found, not writable, or no permission")
+            throw Exception("Cannot access file for deletion: ${file.name}")
+        }
+    } catch (e: Exception) {
+        android.util.Log.e("FolderSync", "Error deleting file ${file.name}: ${e.message}")
+        throw e
+    }
+}
+
+data class PcFile(
+    val path: String,
+    val size: Long,
+    val modified: Double,
+    val hash: String?
+)
+
+suspend fun scanPcFolder(serverUrl: String, folder: SyncFolder): List<PcFile> = withContext(kotlinx.coroutines.Dispatchers.IO) {
+    try {
+        android.util.Log.i("FolderSync", "Scanning PC folder: '${folder.pcPath}' on server: $serverUrl")
+        
+        val client = okhttp3.OkHttpClient.Builder()
+            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+        
+        val requestBody = """{"folder_path": "${folder.pcPath}"}""".toRequestBody("application/json".toMediaType())
+        android.util.Log.i("FolderSync", "Request body: {\"folder_path\": \"${folder.pcPath}\"}")
+        
+        val request = okhttp3.Request.Builder()
+            .url("$serverUrl/api/scan")
+            .post(requestBody)
+            .build()
+        
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                val errorBody = response.body?.string() ?: "Unknown server error"
+                throw Exception("Server error: HTTP ${response.code} - $errorBody")
+            }
+            
+            val responseBody = response.body?.string() ?: throw Exception("Empty response")
+            val jsonResponse = org.json.JSONObject(responseBody)
+            val filesArray = jsonResponse.getJSONArray("files")
+            
+            val pcFiles = mutableListOf<PcFile>()
+            for (i in 0 until filesArray.length()) {
+                val fileObj = filesArray.getJSONObject(i)
+                pcFiles.add(PcFile(
+                    path = fileObj.getString("path"),
+                    size = fileObj.getLong("size"),
+                    modified = fileObj.getDouble("modified"),
+                    hash = fileObj.optString("hash", null)
+                ))
+            }
+            
+            android.util.Log.i("FolderSync", "Found ${pcFiles.size} files on PC in folder: ${folder.pcPath}")
+            return@withContext pcFiles
+        }
+    } catch (e: Exception) {
+        android.util.Log.e("FolderSync", "Error scanning PC folder: ${e.message}")
+        throw Exception("Failed to scan PC folder: ${e.message}")
+    }
+}
+
+suspend fun downloadFileFromServer(context: Context, serverUrl: String, folder: SyncFolder, file: PcFile) = withContext(kotlinx.coroutines.Dispatchers.IO) {
+    try {
+        val client = okhttp3.OkHttpClient.Builder()
+            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+        
+        val request = okhttp3.Request.Builder()
+            .url("$serverUrl/api/download/${file.path}?folder_path=${folder.pcPath}")
+            .get()
+            .build()
+        
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                val errorBody = response.body?.string() ?: "Unknown server error"
+                throw Exception("Server error: HTTP ${response.code} - $errorBody")
+            }
+            
+            val responseBody = response.body ?: throw Exception("Empty response body")
+            
+            // Get Android folder URI
+            val androidUri = folder.androidUri ?: throw Exception("Android folder URI not available")
+            val androidFolder = DocumentFile.fromTreeUri(context, androidUri) 
+                ?: throw Exception("Cannot access Android folder")
+            
+            // Create subdirectories if needed
+            val pathParts = file.path.split("/")
+            var currentFolder = androidFolder
+            
+            // Navigate/create subdirectories
+            for (i in 0 until pathParts.size - 1) {
+                val dirName = pathParts[i]
+                var subFolder = currentFolder.findFile(dirName)
+                if (subFolder == null || !subFolder.isDirectory) {
+                    subFolder = currentFolder.createDirectory(dirName)
+                        ?: throw Exception("Cannot create directory: $dirName")
+                }
+                currentFolder = subFolder
+            }
+            
+            // Get filename
+            val fileName = pathParts.last()
+            
+            // Handle existing files based on sync mode
+            val existingFile = currentFolder.findFile(fileName)
+            if (existingFile != null && existingFile.exists()) {
+                when (folder.pcToAndroidMode) {
+                    SyncMode.MIRROR -> {
+                        // Skip if file already exists
+                        android.util.Log.i("FolderSync", "Skipping existing file: $fileName")
+                        return@withContext
+                    }
+                    SyncMode.COPY_AND_DELETE, SyncMode.SYNC -> {
+                        // Delete existing file to replace it
+                        existingFile.delete()
+                    }
+                }
+            }
+            
+            // Create new file
+            val newFile = currentFolder.createFile("application/octet-stream", fileName)
+                ?: throw Exception("Cannot create file: $fileName")
+            
+            // Write file content
+            context.contentResolver.openOutputStream(newFile.uri)?.use { outputStream ->
+                responseBody.byteStream().use { inputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            } ?: throw Exception("Cannot open output stream for: $fileName")
+            
+            android.util.Log.i("FolderSync", "Successfully downloaded: ${file.path}")
+        }
+    } catch (e: Exception) {
+        android.util.Log.e("FolderSync", "Error downloading file ${file.path}: ${e.message}")
+        throw Exception("${file.path}: ${e.message}")
+    }
+}
+
+suspend fun deleteFileFromServer(serverUrl: String, folder: SyncFolder, file: PcFile) = withContext(kotlinx.coroutines.Dispatchers.IO) {
+    try {
+        val client = okhttp3.OkHttpClient.Builder()
+            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+        
+        val request = okhttp3.Request.Builder()
+            .url("$serverUrl/api/delete/${file.path}?folder_path=${folder.pcPath}")
+            .delete()
+            .build()
+        
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                val errorBody = response.body?.string() ?: "Unknown server error"
+                throw Exception("Server error: HTTP ${response.code} - $errorBody")
+            }
+            
+            android.util.Log.i("FolderSync", "Successfully deleted from server: ${file.path}")
         }
         
-    } catch (e: SecurityException) {
-        throw Exception("Permission denied to delete file")
     } catch (e: Exception) {
-        throw Exception("Delete failed: ${e.message}")
+        android.util.Log.e("FolderSync", "Error deleting file from server ${file.path}: ${e.message}")
+        throw e
     }
 }

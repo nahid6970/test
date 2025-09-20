@@ -111,16 +111,41 @@ def scan_folder():
         data = request.get_json()
         folder_path = data.get('folder_path', '')
         
+        print(f"🔍 Scan request - folder_path: '{folder_path}'")
+        print(f"📁 SYNC_BASE_FOLDER: '{SYNC_BASE_FOLDER}'")
+        
         if not folder_path:
             return jsonify({'error': 'folder_path is required'}), 400
         
-        full_path = os.path.join(SYNC_BASE_FOLDER, folder_path)
+        # Handle both absolute and relative paths
+        if os.path.isabs(folder_path):
+            # If it's an absolute path, use it directly
+            full_path = folder_path
+            print(f"🔗 Using absolute path: '{full_path}'")
+        else:
+            # If it's a relative path, join with sync base folder
+            full_path = os.path.join(SYNC_BASE_FOLDER, folder_path)
+            print(f"🔗 Using relative path: '{full_path}'")
         
-        # Security check - ensure path is within sync base folder
-        if not os.path.abspath(full_path).startswith(os.path.abspath(SYNC_BASE_FOLDER)):
-            return jsonify({'error': 'Invalid folder path'}), 400
+        print(f"📍 Absolute full path: '{os.path.abspath(full_path)}'")
+        print(f"📍 Absolute base path: '{os.path.abspath(SYNC_BASE_FOLDER)}'")
+        
+        # For relative paths, ensure they're within sync base folder
+        # For absolute paths, allow them but warn the user
+        if not os.path.isabs(folder_path):
+            if not os.path.abspath(full_path).startswith(os.path.abspath(SYNC_BASE_FOLDER)):
+                print(f"❌ Security check failed - relative path outside base folder")
+                return jsonify({'error': 'Invalid folder path'}), 400
+        
+        # Check if folder exists
+        if not os.path.exists(full_path):
+            print(f"❌ Folder does not exist: {full_path}")
+            # Create the folder if it doesn't exist
+            os.makedirs(full_path, exist_ok=True)
+            print(f"✅ Created folder: {full_path}")
         
         files_info = scan_directory(full_path)
+        print(f"📊 Found {len(files_info)} files")
         
         return jsonify({
             'folder_path': folder_path,
@@ -129,6 +154,7 @@ def scan_folder():
         })
     
     except Exception as e:
+        print(f"❌ Scan error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/upload', methods=['POST'])
@@ -152,7 +178,12 @@ def upload_file():
         
         # Create safe filename and path
         safe_filename = create_safe_filename(original_filename)
-        target_folder = os.path.join(SYNC_BASE_FOLDER, folder_path)
+        
+        # Handle both absolute and relative paths
+        if os.path.isabs(folder_path):
+            target_folder = folder_path
+        else:
+            target_folder = os.path.join(SYNC_BASE_FOLDER, folder_path)
         
         # Ensure target folder exists
         os.makedirs(target_folder, exist_ok=True)
@@ -242,12 +273,17 @@ def download_file(filename):
         if not folder_path:
             return jsonify({'error': 'folder_path is required'}), 400
         
-        target_folder = os.path.join(SYNC_BASE_FOLDER, folder_path)
+        # Handle both absolute and relative paths
+        if os.path.isabs(folder_path):
+            target_folder = folder_path
+        else:
+            target_folder = os.path.join(SYNC_BASE_FOLDER, folder_path)
         
-        # Security check
+        # Security check for relative paths only
         file_path = os.path.join(target_folder, filename)
-        if not os.path.abspath(file_path).startswith(os.path.abspath(SYNC_BASE_FOLDER)):
-            return jsonify({'error': 'Invalid file path'}), 400
+        if not os.path.isabs(folder_path):
+            if not os.path.abspath(file_path).startswith(os.path.abspath(SYNC_BASE_FOLDER)):
+                return jsonify({'error': 'Invalid file path'}), 400
         
         if not os.path.exists(file_path):
             return jsonify({'error': 'File not found'}), 404
@@ -255,6 +291,43 @@ def download_file(filename):
         return send_from_directory(target_folder, filename)
     
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/delete/<path:filename>', methods=['DELETE'])
+def delete_file(filename):
+    """Delete a file from PC"""
+    try:
+        folder_path = request.args.get('folder_path', '')
+        if not folder_path:
+            return jsonify({'error': 'folder_path is required'}), 400
+        
+        # Handle both absolute and relative paths
+        if os.path.isabs(folder_path):
+            target_folder = folder_path
+        else:
+            target_folder = os.path.join(SYNC_BASE_FOLDER, folder_path)
+        
+        # Security check for relative paths only
+        file_path = os.path.join(target_folder, filename)
+        if not os.path.isabs(folder_path):
+            if not os.path.abspath(file_path).startswith(os.path.abspath(SYNC_BASE_FOLDER)):
+                return jsonify({'error': 'Invalid file path'}), 400
+        
+        if not os.path.exists(file_path):
+            return jsonify({'error': 'File not found'}), 404
+        
+        # Delete the file
+        os.remove(file_path)
+        
+        print(f"🗑️ Deleted file: {filename}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'File {filename} deleted successfully'
+        })
+    
+    except Exception as e:
+        print(f"❌ Delete error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/sync/start', methods=['POST'])
