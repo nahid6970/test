@@ -1013,7 +1013,8 @@ suspend fun scanPcFolder(serverUrl: String, folder: SyncFolder): List<PcFile> = 
             .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
             .build()
         
-        val requestBody = """{"folder_path": "${folder.pcPath}"}""".toRequestBody("application/json".toMediaType())
+        val escapedPcPath = folder.pcPath.replace("\\", "\\\\")
+        val requestBody = """{"folder_path": "$escapedPcPath"}""".toRequestBody("application/json".toMediaType())
         android.util.Log.i("FolderSync", "Request body: {\"folder_path\": \"${folder.pcPath}\"}")
         
         val request = okhttp3.Request.Builder()
@@ -1060,7 +1061,7 @@ suspend fun downloadFileFromServer(context: Context, serverUrl: String, folder: 
             .build()
         
         val request = okhttp3.Request.Builder()
-            .url("$serverUrl/api/download/${file.path}?folder_path=${folder.pcPath}")
+            .url("$serverUrl/api/download/${file.path}?folder_path=${java.net.URLEncoder.encode(folder.pcPath, "UTF-8")}")
             .get()
             .build()
         
@@ -1143,7 +1144,7 @@ suspend fun deleteFileFromServer(serverUrl: String, folder: SyncFolder, file: Pc
             .build()
         
         val request = okhttp3.Request.Builder()
-            .url("$serverUrl/api/delete/${file.path}?folder_path=${folder.pcPath}")
+            .url("$serverUrl/api/delete/${file.path}?folder_path=${java.net.URLEncoder.encode(folder.pcPath, "UTF-8")}")
             .delete()
             .build()
         

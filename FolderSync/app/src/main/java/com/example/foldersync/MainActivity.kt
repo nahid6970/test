@@ -9,6 +9,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
+import androidx.documentfile.provider.DocumentFile
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -40,6 +41,8 @@ class MainActivity : ComponentActivity() {
     
     private var pendingFolderUri: Uri? = null
     private var showAddFolderDialog by mutableStateOf(false)
+    private var pendingImportCallback: ((List<SyncFolder>, String) -> Unit)? = null
+    private var pendingExportData: SyncBackup? = null
     
     private val folderPickerLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -60,6 +63,44 @@ class MainActivity : ComponentActivity() {
         }
     }
     
+    private val exportLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        uri?.let { selectedUri ->
+            pendingExportData?.let { backup ->
+                try {
+                    contentResolver.openOutputStream(selectedUri)?.use { outputStream ->
+                        outputStream.write(Gson().toJson(backup).toByteArray())
+                    }
+                    Toast.makeText(this, "Settings exported successfully!", Toast.LENGTH_LONG).show()
+                } catch (e: Exception) {
+                    Toast.makeText(this, "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+                pendingExportData = null
+            }
+        }
+    }
+    
+    private val importLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let { selectedUri ->
+            pendingImportCallback?.let { callback ->
+                try {
+                    contentResolver.openInputStream(selectedUri)?.use { inputStream ->
+                        val json = inputStream.bufferedReader().use { it.readText() }
+                        val backup = Gson().fromJson(json, SyncBackup::class.java)
+                        callback(backup.folders, backup.serverUrl)
+                        Toast.makeText(this, "Settings imported successfully!", Toast.LENGTH_LONG).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(this, "Import failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+                pendingImportCallback = null
+            }
+        }
+    }
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -72,10 +113,30 @@ class MainActivity : ComponentActivity() {
                     onAddFolderDialogDismiss = { 
                         showAddFolderDialog = false
                         pendingFolderUri = null
-                    }
+                    },
+                    onExportSettings = ::exportSyncFolders,
+                    onImportSettings = ::importSyncFolders
                 )
             }
         }
+    }
+    
+    fun exportSyncFolders(folders: List<SyncFolder>, serverUrl: String) {
+        val backup = SyncBackup(
+            folders = folders,
+            serverUrl = serverUrl,
+            exportDate = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date()),
+            version = "1.0"
+        )
+        
+        pendingExportData = backup
+        val fileName = "FolderSync_Backup_${SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault()).format(java.util.Date())}.json"
+        exportLauncher.launch(fileName)
+    }
+    
+    fun importSyncFolders(onImport: (List<SyncFolder>, String) -> Unit) {
+        pendingImportCallback = onImport
+        importLauncher.launch(arrayOf("application/json"))
     }
 }
 
@@ -85,7 +146,9 @@ fun MainScreen(
     onPickFolder: () -> Unit,
     pendingFolderUri: Uri?,
     showAddFolderDialog: Boolean,
-    onAddFolderDialogDismiss: () -> Unit
+    onAddFolderDialogDismiss: () -> Unit,
+    onExportSettings: (List<SyncFolder>, String) -> Unit,
+    onImportSettings: ((List<SyncFolder>, String) -> Unit) -> Unit
 ) {
     val context = LocalContext.current
     val sharedPrefs = context.getSharedPreferences("folder_sync_prefs", Context.MODE_PRIVATE)
@@ -203,17 +266,16 @@ fun MainScreen(
             },
             onDismiss = { showSettings = false },
             onExport = {
-                exportSyncFolders(context, syncFolders, serverUrl)
+                onExportSettings(syncFolders, serverUrl)
             },
             onImport = {
-                importSyncFolders(context) { importedFolders, importedServerUrl ->
+                onImportSettings { importedFolders, importedServerUrl ->
                     syncFolders = importedFolders
                     saveSyncFolders(context, importedFolders)
                     if (importedServerUrl.isNotEmpty()) {
                         serverUrl = importedServerUrl
                         sharedPrefs.edit().putString("server_url", importedServerUrl).apply()
                     }
-                    Toast.makeText(context, "Settings imported successfully!", Toast.LENGTH_LONG).show()
                 }
             }
         )
@@ -317,7 +379,7 @@ fun SyncFolderCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 
-                // Source → Target Direction
+                // Compact: Source → Type → Target
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
@@ -334,9 +396,34 @@ fun SyncFolderCard(
                     
                     Text(
                         text = " → ",
-                        style = MaterialTheme.typography.headlineSmall,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 8.dp)
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                    
+                    Text(
+                        text = when(folder.syncDirection) {
+                            SyncDirection.ANDROID_TO_PC -> when(folder.androidToPcMode) {
+                                SyncMode.COPY_AND_DELETE -> "Copy & Delete"
+                                SyncMode.MIRROR -> "Mirror"
+                                SyncMode.SYNC -> "Sync"
+                            }
+                            SyncDirection.PC_TO_ANDROID -> when(folder.pcToAndroidMode) {
+                                SyncMode.COPY_AND_DELETE -> "Copy & Delete"
+                                SyncMode.MIRROR -> "Mirror"
+                                SyncMode.SYNC -> "Sync"
+                            }
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.secondary,
+                        fontWeight = FontWeight.Medium
+                    )
+                    
+                    Text(
+                        text = " → ",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 4.dp)
                     )
                     
                     Text(
@@ -348,17 +435,6 @@ fun SyncFolderCard(
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
-                
-                // Type: Mirror/Sync etc
-                Text(
-                    text = "Type: ${when(folder.syncDirection) {
-                        SyncDirection.ANDROID_TO_PC -> folder.androidToPcMode.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }
-                        SyncDirection.PC_TO_ANDROID -> folder.pcToAndroidMode.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }
-                    }}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.secondary,
-                    fontWeight = FontWeight.Medium
-                )
                 
                 // Bottom row: Enable/Disable + Action buttons
                 Row(
@@ -665,77 +741,7 @@ data class SyncBackup(
     val version: String = "1.0"
 )
 
-fun exportSyncFolders(context: Context, folders: List<SyncFolder>, serverUrl: String) {
-    try {
-        val backup = SyncBackup(
-            folders = folders,
-            serverUrl = serverUrl,
-            exportDate = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date()),
-            version = "1.0"
-        )
-        
-        val json = Gson().toJson(backup)
-        val fileName = "FolderSync_Backup_${java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault()).format(java.util.Date())}.json"
-        
-        // Save to Downloads folder
-        val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
-        val file = java.io.File(downloadsDir, fileName)
-        
-        file.writeText(json)
-        
-        Toast.makeText(context, "Settings exported to Downloads/$fileName", Toast.LENGTH_LONG).show()
-        
-        // Also share the file
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "application/json"
-            putExtra(Intent.EXTRA_STREAM, androidx.core.content.FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                file
-            ))
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-        context.startActivity(Intent.createChooser(intent, "Share FolderSync Settings"))
-        
-    } catch (e: Exception) {
-        Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
-    }
-}
 
-fun importSyncFolders(context: Context, onImport: (List<SyncFolder>, String) -> Unit) {
-    try {
-        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-            type = "application/json"
-            addCategory(Intent.CATEGORY_OPENABLE)
-        }
-        
-        // For now, show a message about manual import
-        // In a full implementation, you'd use ActivityResultLauncher
-        Toast.makeText(context, "Import: Place your backup JSON file in Downloads folder and restart the app", Toast.LENGTH_LONG).show()
-        
-        // Try to find backup files in Downloads
-        val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
-        val backupFiles = downloadsDir.listFiles { file -> 
-            file.name.startsWith("FolderSync_Backup_") && file.name.endsWith(".json")
-        }?.sortedByDescending { it.lastModified() }
-        
-        if (backupFiles?.isNotEmpty() == true) {
-            val latestBackup = backupFiles.first()
-            val json = latestBackup.readText()
-            val backup = Gson().fromJson(json, SyncBackup::class.java)
-            
-            onImport(backup.folders, backup.serverUrl)
-            
-            // Delete the imported file
-            latestBackup.delete()
-        } else {
-            Toast.makeText(context, "No backup files found in Downloads folder", Toast.LENGTH_SHORT).show()
-        }
-        
-    } catch (e: Exception) {
-        Toast.makeText(context, "Import failed: ${e.message}", Toast.LENGTH_LONG).show()
-    }
-}
 
 @Composable
 fun AdvancedSettingsDialog(
