@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -11,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
 import androidx.documentfile.provider.DocumentFile
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -30,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.input.KeyboardType
 import com.example.foldersync.ui.theme.FolderSyncTheme
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -43,6 +46,14 @@ class MainActivity : ComponentActivity() {
     private var showAddFolderDialog by mutableStateOf(false)
     private var pendingImportCallback: ((List<SyncFolder>, String) -> Unit)? = null
     private var pendingExportData: SyncBackup? = null
+    
+    private fun updateKeepScreenOn(enabled: Boolean) {
+        if (enabled) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
     
     private val folderPickerLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -115,7 +126,8 @@ class MainActivity : ComponentActivity() {
                         pendingFolderUri = null
                     },
                     onExportSettings = ::exportSyncFolders,
-                    onImportSettings = ::importSyncFolders
+                    onImportSettings = ::importSyncFolders,
+                    onUpdateKeepScreenOn = ::updateKeepScreenOn
                 )
             }
         }
@@ -148,7 +160,8 @@ fun MainScreen(
     showAddFolderDialog: Boolean,
     onAddFolderDialogDismiss: () -> Unit,
     onExportSettings: (List<SyncFolder>, String) -> Unit,
-    onImportSettings: ((List<SyncFolder>, String) -> Unit) -> Unit
+    onImportSettings: ((List<SyncFolder>, String) -> Unit) -> Unit,
+    onUpdateKeepScreenOn: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
     val sharedPrefs = context.getSharedPreferences("folder_sync_prefs", Context.MODE_PRIVATE)
@@ -156,10 +169,21 @@ fun MainScreen(
     var serverUrl by remember { 
         mutableStateOf(sharedPrefs.getString("server_url", "http://192.168.0.101:5016") ?: "http://192.168.0.101:5016") 
     }
+    var timeoutMinutes by remember {
+        mutableStateOf(sharedPrefs.getInt("timeout_minutes", 1))
+    }
+    var keepScreenOn by remember {
+        mutableStateOf(sharedPrefs.getBoolean("keep_screen_on", false))
+    }
     var syncFolders by remember { mutableStateOf(loadSyncFolders(context)) }
     var showSettings by remember { mutableStateOf(false) }
     var editingFolder by remember { mutableStateOf<SyncFolder?>(null) }
     var advancedSettingsFolder by remember { mutableStateOf<SyncFolder?>(null) }
+    
+    // Handle keep screen on
+    LaunchedEffect(keepScreenOn) {
+        onUpdateKeepScreenOn(keepScreenOn)
+    }
     
     Scaffold(
         topBar = {
@@ -259,10 +283,22 @@ fun MainScreen(
     if (showSettings) {
         SettingsDialog(
             currentUrl = serverUrl,
+            currentTimeout = timeoutMinutes,
+            currentKeepScreenOn = keepScreenOn,
             onUrlChange = { newUrl ->
                 serverUrl = newUrl
                 sharedPrefs.edit().putString("server_url", newUrl).apply()
                 Toast.makeText(context, "Server URL saved", Toast.LENGTH_SHORT).show()
+            },
+            onTimeoutChange = { newTimeout ->
+                timeoutMinutes = newTimeout
+                sharedPrefs.edit().putInt("timeout_minutes", newTimeout).apply()
+                Toast.makeText(context, "Timeout saved", Toast.LENGTH_SHORT).show()
+            },
+            onKeepScreenOnChange = { newKeepScreenOn ->
+                keepScreenOn = newKeepScreenOn
+                sharedPrefs.edit().putBoolean("keep_screen_on", newKeepScreenOn).apply()
+                Toast.makeText(context, "Keep screen on ${if (newKeepScreenOn) "enabled" else "disabled"}", Toast.LENGTH_SHORT).show()
             },
             onDismiss = { showSettings = false },
             onExport = {
@@ -504,12 +540,18 @@ fun SyncFolderCard(
 @Composable
 fun SettingsDialog(
     currentUrl: String,
+    currentTimeout: Int,
+    currentKeepScreenOn: Boolean,
     onUrlChange: (String) -> Unit,
+    onTimeoutChange: (Int) -> Unit,
+    onKeepScreenOnChange: (Boolean) -> Unit,
     onDismiss: () -> Unit,
     onExport: () -> Unit,
     onImport: () -> Unit
 ) {
     var tempUrl by remember { mutableStateOf(currentUrl) }
+    var tempTimeout by remember { mutableStateOf(currentTimeout.toString()) }
+    var tempKeepScreenOn by remember { mutableStateOf(currentKeepScreenOn) }
     
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -531,6 +573,53 @@ fun SettingsDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Timeout Configuration
+                Text("Network Timeout:")
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = tempTimeout,
+                    onValueChange = { tempTimeout = it },
+                    label = { Text("Timeout (minutes)") },
+                    placeholder = { Text("1") },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Network timeout in minutes. Default: 1 minute. Increase for large files.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Keep Screen On Configuration
+                Text("Display Settings:")
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Keep Screen On",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "Prevent screen from turning off while app is active",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = tempKeepScreenOn,
+                        onCheckedChange = { tempKeepScreenOn = it }
+                    )
+                }
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
@@ -595,7 +684,10 @@ fun SettingsDialog(
             TextButton(
                 onClick = {
                     if (tempUrl.isNotBlank()) {
+                        val timeoutValue = tempTimeout.toIntOrNull() ?: 1
                         onUrlChange(tempUrl)
+                        onTimeoutChange(timeoutValue)
+                        onKeepScreenOnChange(tempKeepScreenOn)
                         onDismiss()
                     }
                 }
@@ -618,6 +710,7 @@ fun AddFolderDialog(
     onSave: (String, String, String, SyncDirection) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
     // Auto-populate fields when a folder is selected
     val initialAndroidPath = existingFolder?.androidPath ?: pendingFolderUri?.let { uri ->
         // Extract a readable path from the URI
@@ -732,6 +825,12 @@ fun saveSyncFolders(context: Context, folders: List<SyncFolder>) {
     val sharedPrefs = context.getSharedPreferences("folder_sync_prefs", Context.MODE_PRIVATE)
     val json = Gson().toJson(folders)
     sharedPrefs.edit().putString("sync_folders", json).apply()
+}
+
+fun getTimeoutSeconds(context: Context): Long {
+    val sharedPrefs = context.getSharedPreferences("folder_sync_prefs", Context.MODE_PRIVATE)
+    val minutes = sharedPrefs.getInt("timeout_minutes", 1)
+    return minutes * 60L // Convert to seconds
 }
 
 data class SyncBackup(

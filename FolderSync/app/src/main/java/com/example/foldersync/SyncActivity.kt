@@ -2,6 +2,7 @@ package com.example.foldersync
 
 import android.content.Context
 import android.os.Bundle
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -32,9 +33,20 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
+
+
 class SyncActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Check if keep screen on is enabled
+        val sharedPrefs = getSharedPreferences("folder_sync_prefs", Context.MODE_PRIVATE)
+        val keepScreenOn = sharedPrefs.getBoolean("keep_screen_on", false)
+        
+        if (keepScreenOn) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        
         try {
             setContent {
                 FolderSyncTheme {
@@ -392,7 +404,7 @@ suspend fun startSync(
                     // For Mirror mode, compare with PC files first
                     val allFilesToSync = if (folder.androidToPcMode == SyncMode.MIRROR) {
                         android.util.Log.i("FolderSync", "🔍 Using Mirror mode for Android → PC sync")
-                        val pcFiles = scanPcFolder(serverUrl, folder)
+                        val pcFiles = scanPcFolder(serverUrl, folder, context)
                         android.util.Log.i("FolderSync", "📊 Found ${androidFiles.size} Android files and ${pcFiles.size} PC files")
                         compareAndFilterFiles(androidFiles, pcFiles, "📱→💻")
                     } else {
@@ -494,7 +506,7 @@ suspend fun startSync(
                                     SyncAction.DELETE -> {
                                         try {
                                             // Delete file from PC server
-                                            deleteFileFromServer(serverUrl, folder, fileToSync.pcFile!!)
+                                            deleteFileFromServer(serverUrl, folder, fileToSync.pcFile!!, context)
                                             completedOperations++
                                             deletedFiles.add("💻 ${fileToSync.pcFile.path}")
                                             android.util.Log.i("FolderSync", "Successfully deleted from PC: ${fileToSync.pcFile.path}")
@@ -523,7 +535,7 @@ suspend fun startSync(
                 
                 // Handle PC to Android sync
                 if (folder.syncDirection == SyncDirection.PC_TO_ANDROID) {
-                    val pcFiles = scanPcFolder(serverUrl, folder)
+                    val pcFiles = scanPcFolder(serverUrl, folder, context)
                     
                     // For Mirror mode, compare with Android files first
                     val allFilesToSync = if (folder.pcToAndroidMode == SyncMode.MIRROR) {
@@ -585,7 +597,7 @@ suspend fun startSync(
                                             // Handle post-sync actions based on sync mode
                                             if (folder.pcToAndroidMode == SyncMode.COPY_AND_DELETE) {
                                                 try {
-                                                    deleteFileFromServer(serverUrl, folder, pcFile)
+                                                    deleteFileFromServer(serverUrl, folder, pcFile, context)
                                                     android.util.Log.i("FolderSync", "Successfully downloaded and deleted: ${pcFile.path}")
                                                 } catch (e: Exception) {
                                                     android.util.Log.w("FolderSync", "Download succeeded but failed to delete ${pcFile.path}: ${e.message}")
@@ -842,13 +854,19 @@ suspend fun uploadFileToServer(context: Context, serverUrl: String, folder: Sync
                 throw Exception("Failed to create temporary file or file is empty")
             }
             
-            // Create HTTP client (like the working example)
-            val client = okhttp3.OkHttpClient.Builder()
-                .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-                .writeTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-                .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+            // Create HTTP client with configurable timeout
+            val timeoutSeconds = getTimeoutSeconds(context)
+            val clientBuilder = okhttp3.OkHttpClient.Builder()
                 .retryOnConnectionFailure(true)
-                .build()
+            
+            if (timeoutSeconds > 0) {
+                clientBuilder
+                    .connectTimeout(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS)
+                    .writeTimeout(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS)
+                    .readTimeout(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS)
+            }
+            
+            val client = clientBuilder.build()
             
             // Create request body from temp file (like the working example)
             val requestBody = tempFile.asRequestBody("application/octet-stream".toMediaType())
@@ -1004,14 +1022,20 @@ data class PcFile(
     val lastModified: Long = (modified * 1000).toLong() // Convert to milliseconds
 )
 
-suspend fun scanPcFolder(serverUrl: String, folder: SyncFolder): List<PcFile> = withContext(kotlinx.coroutines.Dispatchers.IO) {
+suspend fun scanPcFolder(serverUrl: String, folder: SyncFolder, context: Context): List<PcFile> = withContext(kotlinx.coroutines.Dispatchers.IO) {
     try {
         android.util.Log.i("FolderSync", "Scanning PC folder: '${folder.pcPath}' on server: $serverUrl")
         
-        val client = okhttp3.OkHttpClient.Builder()
-            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-            .build()
+        val timeoutSeconds = getTimeoutSeconds(context)
+        val clientBuilder = okhttp3.OkHttpClient.Builder()
+        
+        if (timeoutSeconds > 0) {
+            clientBuilder
+                .connectTimeout(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS)
+        }
+        
+        val client = clientBuilder.build()
         
         val escapedPcPath = folder.pcPath.replace("\\", "\\\\")
         val requestBody = """{"folder_path": "$escapedPcPath"}""".toRequestBody("application/json".toMediaType())
@@ -1054,11 +1078,17 @@ suspend fun scanPcFolder(serverUrl: String, folder: SyncFolder): List<PcFile> = 
 
 suspend fun downloadFileFromServer(context: Context, serverUrl: String, folder: SyncFolder, file: PcFile, isUpdate: Boolean = false) = withContext(kotlinx.coroutines.Dispatchers.IO) {
     try {
-        val client = okhttp3.OkHttpClient.Builder()
-            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-            .writeTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-            .build()
+        val timeoutSeconds = getTimeoutSeconds(context)
+        val clientBuilder = okhttp3.OkHttpClient.Builder()
+        
+        if (timeoutSeconds > 0) {
+            clientBuilder
+                .connectTimeout(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS)
+                .writeTimeout(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS)
+        }
+        
+        val client = clientBuilder.build()
         
         val request = okhttp3.Request.Builder()
             .url("$serverUrl/api/download/${file.path}?folder_path=${java.net.URLEncoder.encode(folder.pcPath, "UTF-8")}")
@@ -1136,12 +1166,18 @@ suspend fun downloadFileFromServer(context: Context, serverUrl: String, folder: 
     }
 }
 
-suspend fun deleteFileFromServer(serverUrl: String, folder: SyncFolder, file: PcFile) = withContext(kotlinx.coroutines.Dispatchers.IO) {
+suspend fun deleteFileFromServer(serverUrl: String, folder: SyncFolder, file: PcFile, context: Context) = withContext(kotlinx.coroutines.Dispatchers.IO) {
     try {
-        val client = okhttp3.OkHttpClient.Builder()
-            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-            .build()
+        val timeoutSeconds = getTimeoutSeconds(context)
+        val clientBuilder = okhttp3.OkHttpClient.Builder()
+        
+        if (timeoutSeconds > 0) {
+            clientBuilder
+                .connectTimeout(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS)
+        }
+        
+        val client = clientBuilder.build()
         
         val request = okhttp3.Request.Builder()
             .url("$serverUrl/api/delete/${file.path}?folder_path=${java.net.URLEncoder.encode(folder.pcPath, "UTF-8")}")
