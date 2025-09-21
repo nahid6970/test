@@ -314,42 +314,95 @@ fun SyncFolderProgressCard(
                     
                     if (summary.uploadedFiles.isNotEmpty()) {
                         Text(
-                            text = "📱→💻 Uploaded: ${summary.uploadedFiles.joinToString(", ")}",
+                            text = "📱→💻 Uploaded (${summary.uploadedFiles.size}):",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
                         )
+                        summary.uploadedFiles.forEach { file ->
+                            Text(
+                                text = "  • $file",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
                     }
                     
                     if (summary.downloadedFiles.isNotEmpty()) {
                         Text(
-                            text = "💻→📱 Downloaded: ${summary.downloadedFiles.joinToString(", ")}",
+                            text = "💻→📱 Downloaded (${summary.downloadedFiles.size}):",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
                         )
+                        summary.downloadedFiles.forEach { file ->
+                            Text(
+                                text = "  • $file",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
                     }
                     
                     if (summary.updatedFiles.isNotEmpty()) {
                         Text(
-                            text = "🔄 Updated: ${summary.updatedFiles.joinToString(", ")}",
+                            text = "🔄 Updated (${summary.updatedFiles.size}):",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.secondary
+                            color = MaterialTheme.colorScheme.secondary,
+                            fontWeight = FontWeight.Bold
                         )
+                        summary.updatedFiles.forEach { file ->
+                            Text(
+                                text = "  • $file",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
                     }
                     
                     if (summary.deletedFiles.isNotEmpty()) {
                         Text(
-                            text = "🗑️ Deleted: ${summary.deletedFiles.joinToString(", ")}",
+                            text = "🗑️ Deleted (${summary.deletedFiles.size}):",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.Bold
                         )
+                        summary.deletedFiles.forEach { file ->
+                            Text(
+                                text = "  • $file",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
                     }
                     
                     if (summary.skippedFiles.isNotEmpty()) {
                         Text(
-                            text = "⏭️ Skipped: ${summary.skippedFiles.take(3).joinToString(", ")}${if (summary.skippedFiles.size > 3) " and ${summary.skippedFiles.size - 3} more" else ""}",
+                            text = "⏭️ Skipped (${summary.skippedFiles.size}):",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Bold
                         )
+                        // Show first 10 skipped files, then show count if more
+                        summary.skippedFiles.take(10).forEach { file ->
+                            Text(
+                                text = "  • $file",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (summary.skippedFiles.size > 10) {
+                            Text(
+                                text = "  ... and ${summary.skippedFiles.size - 10} more files",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                            )
+                        }
                     }
                 }
             }
@@ -743,7 +796,13 @@ suspend fun scanAndroidFolder(context: Context, folder: SyncFolder): List<Androi
         // If we have a URI, scan that folder
         folder.androidUri?.let { uri ->
             val documentFile = DocumentFile.fromTreeUri(context, uri)
-            documentFile?.let { scanDocumentFolder(it, files, "") }
+            documentFile?.let { 
+                android.util.Log.i("FolderSync", "🚀 Starting parallel scan of Android folder: ${folder.androidPath}")
+                val startTime = System.currentTimeMillis()
+                scanDocumentFolderParallel(it, files, "")
+                val endTime = System.currentTimeMillis()
+                android.util.Log.i("FolderSync", "✅ Parallel scan completed in ${endTime - startTime}ms, found ${files.size} files")
+            }
         }
         
         // No test files created - only sync real files
@@ -756,6 +815,92 @@ suspend fun scanAndroidFolder(context: Context, folder: SyncFolder): List<Androi
     files
 }
 
+suspend fun scanDocumentFolderParallel(documentFile: DocumentFile, files: MutableList<AndroidFile>, currentPath: String): Unit = withContext(kotlinx.coroutines.Dispatchers.IO) {
+    try {
+        val allFiles = documentFile.listFiles()
+        android.util.Log.i("FolderSync", "📁 Scanning directory: $currentPath (${allFiles.size} items)")
+        
+        // Process files with optimized approach - batch processing
+        val filesList = mutableListOf<DocumentFile>()
+        val dirsList = mutableListOf<DocumentFile>()
+        
+        // Separate files and directories first
+        allFiles.forEach { file ->
+            try {
+                if (file.isFile && file.canRead()) {
+                    filesList.add(file)
+                } else if (file.isDirectory && file.canRead()) {
+                    dirsList.add(file)
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("FolderSync", "Skipping item due to error: ${e.message}")
+            }
+        }
+        
+        // Process files in smaller batches to reduce memory pressure
+        val batchSize = 100
+        val batches = filesList.chunked(batchSize)
+        
+        batches.forEach { batch ->
+            val batchResults = mutableListOf<AndroidFile>()
+            
+            // Process each batch
+            batch.forEach { file ->
+                try {
+                    val fileName = file.name
+                    val fileSize = file.length()
+                    
+                    if (!fileName.isNullOrBlank() && fileSize > 0) {
+                        // Get last modified time with optimized approach
+                        val lastModified = try {
+                            file.lastModified()
+                        } catch (e: Exception) {
+                            System.currentTimeMillis()
+                        }
+                        
+                        batchResults.add(AndroidFile(
+                            name = fileName,
+                            uri = file.uri,
+                            size = fileSize,
+                            relativePath = currentPath,
+                            lastModified = lastModified
+                        ))
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.w("FolderSync", "Error processing file: ${e.message}")
+                }
+            }
+            
+            // Add batch results
+            synchronized(files) {
+                files.addAll(batchResults)
+            }
+            
+            // Small delay to prevent overwhelming the system
+            if (batches.size > 1) {
+                kotlinx.coroutines.delay(10)
+            }
+        }
+        
+        // Process directories recursively
+        for (dir: DocumentFile in dirsList) {
+            try {
+                val folderName: String? = dir.name
+                if (!folderName.isNullOrBlank()) {
+                    val subPath: String = if (currentPath.isEmpty()) folderName else "$currentPath/$folderName"
+                    scanDocumentFolderParallel(dir, files, subPath)
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("FolderSync", "Error scanning subdirectory: ${e.message}")
+            }
+        }
+        
+    } catch (e: Exception) {
+        android.util.Log.w("FolderSync", "Error scanning folder: ${e.message}")
+    }
+}
+
+// Keep the original function for compatibility
 fun scanDocumentFolder(documentFile: DocumentFile, files: MutableList<AndroidFile>, currentPath: String) {
     try {
         documentFile.listFiles().forEach { file ->
