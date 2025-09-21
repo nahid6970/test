@@ -179,6 +179,8 @@ fun MainScreen(
     var showSettings by remember { mutableStateOf(false) }
     var editingFolder by remember { mutableStateOf<SyncFolder?>(null) }
     var advancedSettingsFolder by remember { mutableStateOf<SyncFolder?>(null) }
+    var folderToDelete by remember { mutableStateOf<SyncFolder?>(null) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
     
     // Handle keep screen on
     LaunchedEffect(keepScreenOn) {
@@ -268,8 +270,8 @@ fun MainScreen(
                             },
                             onEdit = { editingFolder = folder },
                             onDelete = {
-                                syncFolders = syncFolders.filter { it.id != folder.id }
-                                saveSyncFolders(context, syncFolders)
+                                folderToDelete = folder
+                                showDeleteConfirmation = true
                             },
                             onAdvancedSettings = { advancedSettingsFolder = folder }
                         )
@@ -370,6 +372,24 @@ fun MainScreen(
                 advancedSettingsFolder = null
             },
             onDismiss = { advancedSettingsFolder = null }
+        )
+    }
+    
+    // Delete Confirmation Dialog with PIN
+    if (showDeleteConfirmation && folderToDelete != null) {
+        DeleteConfirmationDialog(
+            folder = folderToDelete!!,
+            onConfirm = {
+                syncFolders = syncFolders.filter { it.id != folderToDelete!!.id }
+                saveSyncFolders(context, syncFolders)
+                showDeleteConfirmation = false
+                folderToDelete = null
+                Toast.makeText(context, "Sync folder deleted", Toast.LENGTH_SHORT).show()
+            },
+            onDismiss = {
+                showDeleteConfirmation = false
+                folderToDelete = null
+            }
         )
     }
 }
@@ -946,6 +966,116 @@ fun AdvancedSettingsDialog(
                 }
             ) {
                 Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+@Composable
+
+fun DeleteConfirmationDialog(
+    folder: SyncFolder,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    var pinInput by remember { mutableStateOf("") }
+    val correctPin = "1823"
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { 
+            Text(
+                text = "⚠️ Delete Sync Folder",
+                color = MaterialTheme.colorScheme.error
+            ) 
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "You are about to delete:",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp)
+                    ) {
+                        Text(
+                            text = folder.name,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Text(
+                            text = "📱 ${folder.androidPath}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Text(
+                            text = "💻 ${folder.pcPath}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+                
+                Text(
+                    text = "This action cannot be undone!",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.error
+                )
+                
+                Text(
+                    text = "To confirm deletion, enter PIN:",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                
+                OutlinedTextField(
+                    value = pinInput,
+                    onValueChange = { 
+                        if (it.length <= 4 && it.all { char -> char.isDigit() }) {
+                            pinInput = it
+                        }
+                    },
+                    label = { Text("Enter PIN: 1823") },
+                    placeholder = { Text("1823") },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    isError = pinInput.isNotEmpty() && pinInput != correctPin,
+                    supportingText = {
+                        if (pinInput.isNotEmpty() && pinInput != correctPin) {
+                            Text(
+                                text = "Incorrect PIN",
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (pinInput == correctPin) {
+                        onConfirm()
+                    }
+                },
+                enabled = pinInput == correctPin,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                Text("Delete Forever")
             }
         },
         dismissButton = {
