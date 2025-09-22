@@ -282,9 +282,17 @@ def upload_file():
 def download_file(filename):
     """Download a file from PC"""
     try:
+        # URL decode the filename to handle special characters like # and +
+        import urllib.parse
+        original_filename = filename
+        # Use unquote to handle URL-encoded characters (+ is now encoded as %20)
+        filename = urllib.parse.unquote(filename)
+        
         folder_path = request.args.get('folder_path', '')
         if not folder_path:
             return jsonify({'error': 'folder_path is required'}), 400
+        
+        print(f"📥 Download request - folder: '{folder_path}', original: '{original_filename}', decoded: '{filename}'")
         
         # Handle both absolute and relative paths
         if os.path.isabs(folder_path):
@@ -310,11 +318,17 @@ def download_file(filename):
 def delete_file(filename):
     """Delete a file from PC (for Mirror mode)"""
     try:
+        # URL decode the filename to handle special characters like # and +
+        import urllib.parse
+        original_filename = filename
+        # Use unquote to handle URL-encoded characters (+ is now encoded as %20)
+        filename = urllib.parse.unquote(filename)
+        
         folder_path = request.args.get('folder_path', '')
         if not folder_path:
             return jsonify({'error': 'folder_path is required'}), 400
         
-        print(f"🗑️ Delete request - folder: '{folder_path}', file: '{filename}'")
+        print(f"🗑️ Delete request - folder: '{folder_path}', original: '{original_filename}', decoded: '{filename}'")
         
         # Handle both absolute and relative paths
         if os.path.isabs(folder_path):

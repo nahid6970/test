@@ -1338,7 +1338,7 @@ suspend fun downloadFileFromServer(context: Context, serverUrl: String, folder: 
         val client = clientBuilder.build()
         
         val request = okhttp3.Request.Builder()
-            .url("$serverUrl/api/download/${file.path}?folder_path=${java.net.URLEncoder.encode(folder.pcPath, "UTF-8")}")
+            .url("$serverUrl/api/download/${java.net.URLEncoder.encode(file.path, "UTF-8").replace("+", "%20")}?folder_path=${java.net.URLEncoder.encode(folder.pcPath, "UTF-8")}")
             .get()
             .build()
         
@@ -1427,7 +1427,7 @@ suspend fun deleteFileFromServer(serverUrl: String, folder: SyncFolder, file: Pc
         val client = clientBuilder.build()
         
         val request = okhttp3.Request.Builder()
-            .url("$serverUrl/api/delete/${file.path}?folder_path=${java.net.URLEncoder.encode(folder.pcPath, "UTF-8")}")
+            .url("$serverUrl/api/delete/${java.net.URLEncoder.encode(file.path, "UTF-8").replace("+", "%20")}?folder_path=${java.net.URLEncoder.encode(folder.pcPath, "UTF-8")}")
             .delete()
             .build()
         
