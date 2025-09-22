@@ -247,10 +247,71 @@ fun SyncFolderProgressCard(
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        text = "📱 ${folder.androidPath} ↔️ 💻 ${folder.pcPath}",
+                        text = "📱 ${folder.androidPath}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Text(
+                        text = "💻 ${folder.pcPath}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    // Sync direction and mode display
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Start,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Source icon
+                        Text(
+                            text = when(folder.syncDirection) {
+                                SyncDirection.ANDROID_TO_PC -> "📱"
+                                SyncDirection.PC_TO_ANDROID -> "💻"
+                            },
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        
+                        Text(
+                            text = " → ",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        
+                        // Sync mode
+                        Text(
+                            text = when(folder.syncDirection) {
+                                SyncDirection.ANDROID_TO_PC -> when(folder.androidToPcMode) {
+                                    SyncMode.COPY_AND_DELETE -> "Copy & Delete"
+                                    SyncMode.MIRROR -> "Mirror"
+                                    SyncMode.SYNC -> "Sync"
+                                }
+                                SyncDirection.PC_TO_ANDROID -> when(folder.pcToAndroidMode) {
+                                    SyncMode.COPY_AND_DELETE -> "Copy & Delete"
+                                    SyncMode.MIRROR -> "Mirror"
+                                    SyncMode.SYNC -> "Sync"
+                                }
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.secondary,
+                            fontWeight = FontWeight.Medium
+                        )
+                        
+                        Text(
+                            text = " → ",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        
+                        // Target icon
+                        Text(
+                            text = when(folder.syncDirection) {
+                                SyncDirection.ANDROID_TO_PC -> "💻"
+                                SyncDirection.PC_TO_ANDROID -> "📱"
+                            },
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
                 }
                 
                 when (status.status) {
@@ -800,8 +861,9 @@ suspend fun scanAndroidFolder(context: Context, folder: SyncFolder): List<Androi
                 android.util.Log.i("FolderSync", "🚀 Starting parallel scan of Android folder: ${folder.androidPath}")
                 android.util.Log.i("FolderSync", "🚫 Ignore prefixes: '${folder.ignorePrefixes}'")
                 android.util.Log.i("FolderSync", "🚫 Ignore suffixes: '${folder.ignoreSuffixes}'")
+                android.util.Log.i("FolderSync", "🚫 Ignore folders: '${folder.ignoreFolders}'")
                 val startTime = System.currentTimeMillis()
-                scanDocumentFolderParallel(it, files, "", folder.ignorePrefixes, folder.ignoreSuffixes)
+                scanDocumentFolderParallel(it, files, "", folder.ignorePrefixes, folder.ignoreSuffixes, folder.ignoreFolders)
                 val endTime = System.currentTimeMillis()
                 android.util.Log.i("FolderSync", "✅ Parallel scan completed in ${endTime - startTime}ms, found ${files.size} files")
             }
@@ -817,7 +879,7 @@ suspend fun scanAndroidFolder(context: Context, folder: SyncFolder): List<Androi
     files
 }
 
-suspend fun scanDocumentFolderParallel(documentFile: DocumentFile, files: MutableList<AndroidFile>, currentPath: String, ignorePrefixes: String, ignoreSuffixes: String): Unit = withContext(kotlinx.coroutines.Dispatchers.IO) {
+suspend fun scanDocumentFolderParallel(documentFile: DocumentFile, files: MutableList<AndroidFile>, currentPath: String, ignorePrefixes: String, ignoreSuffixes: String, ignoreFolders: String = ""): Unit = withContext(kotlinx.coroutines.Dispatchers.IO) {
     try {
         val allFiles = documentFile.listFiles()
         android.util.Log.i("FolderSync", "📁 Scanning directory: $currentPath (${allFiles.size} items)")
@@ -832,7 +894,15 @@ suspend fun scanDocumentFolderParallel(documentFile: DocumentFile, files: Mutabl
                 if (file.isFile && file.canRead()) {
                     filesList.add(file)
                 } else if (file.isDirectory && file.canRead()) {
-                    dirsList.add(file)
+                    val folderName = file.name
+                    if (!folderName.isNullOrBlank()) {
+                        // Check if folder should be ignored
+                        if (shouldIgnoreFolder(folderName, ignoreFolders)) {
+                            android.util.Log.d("FolderSync", "🚫 Ignoring folder: $folderName")
+                        } else {
+                            dirsList.add(file)
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 android.util.Log.w("FolderSync", "Skipping item due to error: ${e.message}")
@@ -896,7 +966,7 @@ suspend fun scanDocumentFolderParallel(documentFile: DocumentFile, files: Mutabl
                 val folderName: String? = dir.name
                 if (!folderName.isNullOrBlank()) {
                     val subPath: String = if (currentPath.isEmpty()) folderName else "$currentPath/$folderName"
-                    scanDocumentFolderParallel(dir, files, subPath, ignorePrefixes, ignoreSuffixes)
+                    scanDocumentFolderParallel(dir, files, subPath, ignorePrefixes, ignoreSuffixes, ignoreFolders)
                 }
             } catch (e: Exception) {
                 android.util.Log.w("FolderSync", "Error scanning subdirectory: ${e.message}")
@@ -1220,14 +1290,28 @@ suspend fun scanPcFolder(serverUrl: String, folder: SyncFolder, context: Context
                 ))
             }
             
-            // Filter out ignored files
+            // Filter out ignored files and files in ignored folders
             val pcFiles = allPcFiles.filter { pcFile ->
                 val fileName = pcFile.path.substringAfterLast("/")
-                val shouldIgnore = shouldIgnoreFile(fileName, folder.ignorePrefixes, folder.ignoreSuffixes)
-                if (shouldIgnore) {
+                val filePath = pcFile.path
+                
+                // Check if file should be ignored
+                val shouldIgnoreFile = shouldIgnoreFile(fileName, folder.ignorePrefixes, folder.ignoreSuffixes)
+                if (shouldIgnoreFile) {
                     android.util.Log.d("FolderSync", "🚫 Ignoring PC file: ${pcFile.path}")
+                    return@filter false
                 }
-                !shouldIgnore
+                
+                // Check if file is in an ignored folder
+                val pathParts = filePath.split("/")
+                for (part in pathParts.dropLast(1)) { // Don't check the filename itself
+                    if (shouldIgnoreFolder(part, folder.ignoreFolders)) {
+                        android.util.Log.d("FolderSync", "🚫 Ignoring PC file in ignored folder: ${pcFile.path} (folder: $part)")
+                        return@filter false
+                    }
+                }
+                
+                true
             }
             
             android.util.Log.i("FolderSync", "Found ${pcFiles.size} files on PC in folder: ${folder.pcPath} (${allPcFiles.size - pcFiles.size} ignored)")
@@ -1500,6 +1584,21 @@ fun shouldIgnoreFile(fileName: String, ignorePrefixes: String, ignoreSuffixes: S
     for (suffix in suffixes) {
         if (fileName.endsWith(suffix, ignoreCase = true)) {
             android.util.Log.d("FolderSync", "🚫 Ignoring file '$fileName' - matches suffix '$suffix'")
+            return true
+        }
+    }
+    
+    return false
+}
+
+fun shouldIgnoreFolder(folderName: String, ignoreFolders: String): Boolean {
+    if (folderName.isBlank() || ignoreFolders.isBlank()) return false
+    
+    // Parse folder names
+    val folders = ignoreFolders.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+    for (ignoreFolder in folders) {
+        if (folderName.equals(ignoreFolder, ignoreCase = true)) {
+            android.util.Log.d("FolderSync", "🚫 Ignoring folder '$folderName' - matches ignore pattern '$ignoreFolder'")
             return true
         }
     }

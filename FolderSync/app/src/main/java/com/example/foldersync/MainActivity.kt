@@ -15,11 +15,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
@@ -262,7 +264,7 @@ fun MainScreen(
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(syncFolders) { folder ->
+                    itemsIndexed(syncFolders) { index, folder ->
                         SyncFolderCard(
                             folder = folder,
                             onToggleEnabled = { enabled ->
@@ -280,7 +282,18 @@ fun MainScreen(
                             onIgnoreList = {
                                 folderForIgnoreList = folder
                                 showIgnoreList = true
-                            }
+                            },
+                            onMoveUp = {
+                                if (index > 0) {
+                                    val mutableList = syncFolders.toMutableList()
+                                    val temp = mutableList[index]
+                                    mutableList[index] = mutableList[index - 1]
+                                    mutableList[index - 1] = temp
+                                    syncFolders = mutableList
+                                    saveSyncFolders(context, syncFolders)
+                                }
+                            },
+                            canMoveUp = index > 0
                         )
                     }
                 }
@@ -406,12 +419,13 @@ fun MainScreen(
             folder = folderForIgnoreList!!,
             currentPrefixes = folderForIgnoreList!!.ignorePrefixes,
             currentSuffixes = folderForIgnoreList!!.ignoreSuffixes,
-            onSave = { newPrefixes, newSuffixes ->
+            onSave = { newPrefixes, newSuffixes, newFolders ->
                 syncFolders = syncFolders.map { 
                     if (it.id == folderForIgnoreList!!.id) {
                         it.copy(
                             ignorePrefixes = newPrefixes,
-                            ignoreSuffixes = newSuffixes
+                            ignoreSuffixes = newSuffixes,
+                            ignoreFolders = newFolders
                         )
                     } else it 
                 }
@@ -435,7 +449,9 @@ fun SyncFolderCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onAdvancedSettings: () -> Unit,
-    onIgnoreList: () -> Unit
+    onIgnoreList: () -> Unit,
+    onMoveUp: () -> Unit,
+    canMoveUp: Boolean
 ) {
     Card(
         modifier = Modifier.fillMaxWidth()
@@ -448,13 +464,33 @@ fun SyncFolderCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Folder Name (prominent)
-                Text(
-                    text = folder.name,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                // Folder Name with up arrow
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = folder.name,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    
+                    if (canMoveUp) {
+                        IconButton(
+                            onClick = onMoveUp,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.KeyboardArrowUp,
+                                contentDescription = "Move Up",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
                 
                 // Android Path (always first line)
                 Text(
@@ -882,29 +918,46 @@ fun loadSyncFolders(context: Context): List<SyncFolder> {
         val type = object : TypeToken<List<SyncFolder>>() {}.type
         val folders = Gson().fromJson<List<SyncFolder>>(json, type) ?: emptyList()
         
-        // Check if migration is needed (if any folder is missing ignore fields)
-        val needsMigration = folders.any { folder ->
-            try {
-                // Try to access the ignore fields - if they're null or missing, we need migration
-                folder.ignorePrefixes.isEmpty() && folder.ignoreSuffixes.isEmpty()
-            } catch (e: Exception) {
-                true // If accessing fields throws exception, we need migration
-            }
-        }
-        
-        if (needsMigration) {
-            // Migrate existing folders to include default ignore settings
+        // Always try to migrate to ensure all fields are present
+        try {
             val migratedFolders = folders.map { folder ->
-                folder.copy(
-                    ignorePrefixes = if (folder.ignorePrefixes.isBlank()) "., ~" else folder.ignorePrefixes,
-                    ignoreSuffixes = if (folder.ignoreSuffixes.isBlank()) ".tmp, .pyc, .log" else folder.ignoreSuffixes
-                )
+                try {
+                    // Try to access all fields and provide empty defaults if missing
+                    folder.copy(
+                        ignorePrefixes = folder.ignorePrefixes,
+                        ignoreSuffixes = folder.ignoreSuffixes,
+                        ignoreFolders = try { 
+                            folder.ignoreFolders 
+                        } catch (e: Exception) { 
+                            "" 
+                        }
+                    )
+                } catch (e: Exception) {
+                    // If copy fails, create a new folder with all fields
+                    SyncFolder(
+                        id = folder.id,
+                        name = folder.name,
+                        androidPath = folder.androidPath,
+                        androidUriString = folder.androidUriString,
+                        pcPath = folder.pcPath,
+                        isEnabled = folder.isEnabled,
+                        lastSyncTime = folder.lastSyncTime,
+                        syncDirection = folder.syncDirection,
+                        androidToPcMode = folder.androidToPcMode,
+                        pcToAndroidMode = folder.pcToAndroidMode,
+                        ignorePrefixes = try { folder.ignorePrefixes } catch (e: Exception) { "" },
+                        ignoreSuffixes = try { folder.ignoreSuffixes } catch (e: Exception) { "" },
+                        ignoreFolders = ""
+                    )
+                }
             }
             // Save migrated data
             saveSyncFolders(context, migratedFolders)
+            android.util.Log.i("FolderSync", "Successfully migrated ${migratedFolders.size} folders with ignore folders support")
             migratedFolders
-        } else {
-            folders
+        } catch (migrationException: Exception) {
+            android.util.Log.e("FolderSync", "Migration failed: ${migrationException.message}")
+            throw migrationException
         }
     } catch (e: Exception) {
         android.util.Log.w("FolderSync", "Failed to load sync folders, will try legacy format: ${e.message}")
@@ -927,8 +980,9 @@ fun loadSyncFolders(context: Context): List<SyncFolder> {
                     syncDirection = legacy.syncDirection,
                     androidToPcMode = legacy.androidToPcMode,
                     pcToAndroidMode = legacy.pcToAndroidMode,
-                    ignorePrefixes = "., ~",
-                    ignoreSuffixes = ".tmp, .pyc, .log"
+                    ignorePrefixes = "",
+                    ignoreSuffixes = "",
+                    ignoreFolders = ""
                 )
             }
             
@@ -1209,11 +1263,12 @@ fun IgnoreListDialog(
     folder: SyncFolder,
     currentPrefixes: String,
     currentSuffixes: String,
-    onSave: (String, String) -> Unit,
+    onSave: (String, String, String) -> Unit,
     onDismiss: () -> Unit
 ) {
     var tempPrefixes by remember { mutableStateOf(currentPrefixes) }
     var tempSuffixes by remember { mutableStateOf(currentSuffixes) }
+    var tempFolders by remember { mutableStateOf(folder.ignoreFolders) }
     
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1243,15 +1298,8 @@ fun IgnoreListDialog(
                     value = tempPrefixes,
                     onValueChange = { tempPrefixes = it },
                     label = { Text("Prefixes (comma-separated)") },
-                    placeholder = { Text("., ~, temp") },
-                    modifier = Modifier.fillMaxWidth(),
-                    supportingText = {
-                        Text(
-                            text = "Example: ., ~ will ignore .hidden and ~backup files",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    placeholder = { Text("., ~, temp (optional)") },
+                    modifier = Modifier.fillMaxWidth()
                 )
                 
                 // Suffix Section
@@ -1265,54 +1313,32 @@ fun IgnoreListDialog(
                     value = tempSuffixes,
                     onValueChange = { tempSuffixes = it },
                     label = { Text("Suffixes (comma-separated)") },
-                    placeholder = { Text(".tmp, .pyc, .log") },
-                    modifier = Modifier.fillMaxWidth(),
-                    supportingText = {
-                        Text(
-                            text = "Example: .pyc, .iso, .png will ignore Python cache, ISO images, and PNG files",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    placeholder = { Text(".tmp, .pyc, .log (optional)") },
+                    modifier = Modifier.fillMaxWidth()
                 )
                 
-                // Info Card
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp)
-                    ) {
-                        Text(
-                            text = "💡 How it works:",
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        Text(
-                            text = "• Files matching these patterns will be completely skipped during scanning and sync",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        Text(
-                            text = "• Use commas to separate multiple patterns",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        Text(
-                            text = "• Changes apply to all sync folders",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
+                // Folder Section
+                Text(
+                    text = "Ignore folders named:",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                OutlinedTextField(
+                    value = tempFolders,
+                    onValueChange = { tempFolders = it },
+                    label = { Text("Folder names (comma-separated)") },
+                    placeholder = { Text(".git, __pycache__, node_modules (optional)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    onSave(tempPrefixes.trim(), tempSuffixes.trim())
+                    onSave(tempPrefixes.trim(), tempSuffixes.trim(), tempFolders.trim())
                 }
             ) {
                 Text("Save")
