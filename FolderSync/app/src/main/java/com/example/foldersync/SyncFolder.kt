@@ -12,7 +12,9 @@ data class SyncFolder(
     val lastSyncTime: Long = 0L,
     val syncDirection: SyncDirection = SyncDirection.ANDROID_TO_PC,
     val androidToPcMode: SyncMode = SyncMode.COPY_AND_DELETE,
-    val pcToAndroidMode: SyncMode = SyncMode.COPY_AND_DELETE
+    val pcToAndroidMode: SyncMode = SyncMode.COPY_AND_DELETE,
+    val ignorePrefixes: String = "., ~",
+    val ignoreSuffixes: String = ".tmp, .pyc, .log"
 ) {
     // Helper property to get Uri from String
     val androidUri: Uri?

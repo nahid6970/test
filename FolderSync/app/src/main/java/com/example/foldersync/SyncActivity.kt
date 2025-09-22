@@ -798,8 +798,10 @@ suspend fun scanAndroidFolder(context: Context, folder: SyncFolder): List<Androi
             val documentFile = DocumentFile.fromTreeUri(context, uri)
             documentFile?.let { 
                 android.util.Log.i("FolderSync", "🚀 Starting parallel scan of Android folder: ${folder.androidPath}")
+                android.util.Log.i("FolderSync", "🚫 Ignore prefixes: '${folder.ignorePrefixes}'")
+                android.util.Log.i("FolderSync", "🚫 Ignore suffixes: '${folder.ignoreSuffixes}'")
                 val startTime = System.currentTimeMillis()
-                scanDocumentFolderParallel(it, files, "")
+                scanDocumentFolderParallel(it, files, "", folder.ignorePrefixes, folder.ignoreSuffixes)
                 val endTime = System.currentTimeMillis()
                 android.util.Log.i("FolderSync", "✅ Parallel scan completed in ${endTime - startTime}ms, found ${files.size} files")
             }
@@ -815,7 +817,7 @@ suspend fun scanAndroidFolder(context: Context, folder: SyncFolder): List<Androi
     files
 }
 
-suspend fun scanDocumentFolderParallel(documentFile: DocumentFile, files: MutableList<AndroidFile>, currentPath: String): Unit = withContext(kotlinx.coroutines.Dispatchers.IO) {
+suspend fun scanDocumentFolderParallel(documentFile: DocumentFile, files: MutableList<AndroidFile>, currentPath: String, ignorePrefixes: String, ignoreSuffixes: String): Unit = withContext(kotlinx.coroutines.Dispatchers.IO) {
     try {
         val allFiles = documentFile.listFiles()
         android.util.Log.i("FolderSync", "📁 Scanning directory: $currentPath (${allFiles.size} items)")
@@ -851,6 +853,12 @@ suspend fun scanDocumentFolderParallel(documentFile: DocumentFile, files: Mutabl
                     val fileSize = file.length()
                     
                     if (!fileName.isNullOrBlank() && fileSize > 0) {
+                        // Check if file should be ignored
+                        if (shouldIgnoreFile(fileName, ignorePrefixes, ignoreSuffixes)) {
+                            android.util.Log.d("FolderSync", "🚫 Ignoring file: $fileName")
+                            return@forEach
+                        }
+                        
                         // Get last modified time with optimized approach
                         val lastModified = try {
                             file.lastModified()
@@ -888,7 +896,7 @@ suspend fun scanDocumentFolderParallel(documentFile: DocumentFile, files: Mutabl
                 val folderName: String? = dir.name
                 if (!folderName.isNullOrBlank()) {
                     val subPath: String = if (currentPath.isEmpty()) folderName else "$currentPath/$folderName"
-                    scanDocumentFolderParallel(dir, files, subPath)
+                    scanDocumentFolderParallel(dir, files, subPath, ignorePrefixes, ignoreSuffixes)
                 }
             } catch (e: Exception) {
                 android.util.Log.w("FolderSync", "Error scanning subdirectory: ${e.message}")
@@ -1201,10 +1209,10 @@ suspend fun scanPcFolder(serverUrl: String, folder: SyncFolder, context: Context
             val jsonResponse = org.json.JSONObject(responseBody)
             val filesArray = jsonResponse.getJSONArray("files")
             
-            val pcFiles = mutableListOf<PcFile>()
+            val allPcFiles = mutableListOf<PcFile>()
             for (i in 0 until filesArray.length()) {
                 val fileObj = filesArray.getJSONObject(i)
-                pcFiles.add(PcFile(
+                allPcFiles.add(PcFile(
                     path = fileObj.getString("path"),
                     size = fileObj.getLong("size"),
                     modified = fileObj.getDouble("modified"),
@@ -1212,7 +1220,17 @@ suspend fun scanPcFolder(serverUrl: String, folder: SyncFolder, context: Context
                 ))
             }
             
-            android.util.Log.i("FolderSync", "Found ${pcFiles.size} files on PC in folder: ${folder.pcPath}")
+            // Filter out ignored files
+            val pcFiles = allPcFiles.filter { pcFile ->
+                val fileName = pcFile.path.substringAfterLast("/")
+                val shouldIgnore = shouldIgnoreFile(fileName, folder.ignorePrefixes, folder.ignoreSuffixes)
+                if (shouldIgnore) {
+                    android.util.Log.d("FolderSync", "🚫 Ignoring PC file: ${pcFile.path}")
+                }
+                !shouldIgnore
+            }
+            
+            android.util.Log.i("FolderSync", "Found ${pcFiles.size} files on PC in folder: ${folder.pcPath} (${allPcFiles.size - pcFiles.size} ignored)")
             return@withContext pcFiles
         }
     } catch (e: Exception) {
@@ -1463,4 +1481,28 @@ fun compareAndFilterFiles(
     android.util.Log.i("FolderSync", "$direction Mirror mode: ${filesToSync.count { it.action == SyncAction.UPLOAD || it.action == SyncAction.DOWNLOAD || it.action == SyncAction.UPDATE }} files to sync, ${filesToSync.count { it.action == SyncAction.DELETE }} files to delete")
     
     return filesToSync
+}
+
+fun shouldIgnoreFile(fileName: String, ignorePrefixes: String, ignoreSuffixes: String): Boolean {
+    if (fileName.isBlank()) return true
+    
+    // Parse prefixes
+    val prefixes = ignorePrefixes.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+    for (prefix in prefixes) {
+        if (fileName.startsWith(prefix)) {
+            android.util.Log.d("FolderSync", "🚫 Ignoring file '$fileName' - matches prefix '$prefix'")
+            return true
+        }
+    }
+    
+    // Parse suffixes
+    val suffixes = ignoreSuffixes.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+    for (suffix in suffixes) {
+        if (fileName.endsWith(suffix, ignoreCase = true)) {
+            android.util.Log.d("FolderSync", "🚫 Ignoring file '$fileName' - matches suffix '$suffix'")
+            return true
+        }
+    }
+    
+    return false
 }
