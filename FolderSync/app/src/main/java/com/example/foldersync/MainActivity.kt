@@ -187,10 +187,7 @@ fun MainScreen(
     var folderForIgnoreList by remember { mutableStateOf<SyncFolder?>(null) }
     var showIgnoreList by remember { mutableStateOf(false) }
     
-    // Handle keep screen on
-    LaunchedEffect(keepScreenOn) {
-        onUpdateKeepScreenOn(keepScreenOn)
-    }
+    // Keep screen on is now handled only during sync progress
     
     Scaffold(
         topBar = {
@@ -708,13 +705,8 @@ fun SettingsDialog(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Keep Screen On",
+                            text = "Keep Only When Active Progress",
                             style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = "Prevent screen from turning off while app is active",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Switch(

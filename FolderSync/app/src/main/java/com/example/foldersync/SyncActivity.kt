@@ -39,19 +39,12 @@ class SyncActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Check if keep screen on is enabled
-        val sharedPrefs = getSharedPreferences("folder_sync_prefs", Context.MODE_PRIVATE)
-        val keepScreenOn = sharedPrefs.getBoolean("keep_screen_on", false)
-        
-        if (keepScreenOn) {
-            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
-        
         try {
             setContent {
                 FolderSyncTheme {
                     SyncScreen(
-                        onFinish = { finish() }
+                        onFinish = { finish() },
+                        activity = this
                     )
                 }
             }
@@ -60,12 +53,19 @@ class SyncActivity : ComponentActivity() {
             finish()
         }
     }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        // Ensure screen timeout is restored when activity is destroyed
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SyncScreen(
-    onFinish: () -> Unit
+    onFinish: () -> Unit,
+    activity: ComponentActivity
 ) {
     val context = LocalContext.current
     val syncFolders = try {
@@ -91,6 +91,23 @@ fun SyncScreen(
     var currentTime by remember { mutableStateOf(System.currentTimeMillis()) }
     
     val scope = rememberCoroutineScope()
+    
+    // Check if keep screen on is enabled
+    val sharedPrefs = context.getSharedPreferences("folder_sync_prefs", Context.MODE_PRIVATE)
+    val keepScreenOnEnabled = sharedPrefs.getBoolean("keep_screen_on", false)
+    
+    // Handle keep screen on only during active sync progress
+    val hasActiveSync = syncStatuses.any { 
+        it.status == SyncState.SCANNING || it.status == SyncState.SYNCING 
+    }
+    
+    LaunchedEffect(hasActiveSync, keepScreenOnEnabled) {
+        if (keepScreenOnEnabled && hasActiveSync) {
+            activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
     
     // Timer to update scanning display every second
     LaunchedEffect(syncStatuses) {
