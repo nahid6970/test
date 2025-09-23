@@ -88,8 +88,17 @@ fun SyncScreen(
     
     var isRunning by remember { mutableStateOf(false) }
     var overallProgress by remember { mutableStateOf(0f) }
+    var currentTime by remember { mutableStateOf(System.currentTimeMillis()) }
     
     val scope = rememberCoroutineScope()
+    
+    // Timer to update scanning display every second
+    LaunchedEffect(syncStatuses) {
+        while (syncStatuses.any { it.status == SyncState.SCANNING }) {
+            currentTime = System.currentTimeMillis()
+            delay(1000) // Update every second
+        }
+    }
     
     Scaffold(
         topBar = {
@@ -147,7 +156,8 @@ fun SyncScreen(
                 items(syncFolders.zip(syncStatuses)) { (folder, status) ->
                     SyncFolderProgressCard(
                         folder = folder,
-                        status = status
+                        status = status,
+                        currentTime = currentTime
                     )
                 }
             }
@@ -220,7 +230,8 @@ fun SyncScreen(
 @Composable
 fun SyncFolderProgressCard(
     folder: SyncFolder,
-    status: SyncStatus
+    status: SyncStatus,
+    currentTime: Long = System.currentTimeMillis()
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -315,17 +326,52 @@ fun SyncFolderProgressCard(
                 }
                 
                 when (status.status) {
-                    SyncState.COMPLETED -> Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = "Completed",
-                        tint = Color.Green
-                    )
+                    SyncState.COMPLETED -> {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = "Completed",
+                                tint = Color.Green
+                            )
+                            if (status.scanStartTime > 0 && status.completionTime > 0) {
+                                val scanTime = if (status.syncStartTime > 0) {
+                                    (status.syncStartTime - status.scanStartTime) / 1000
+                                } else {
+                                    (status.completionTime - status.scanStartTime) / 1000
+                                }
+                                val syncTime = if (status.syncStartTime > 0) {
+                                    (status.completionTime - status.syncStartTime) / 1000
+                                } else 0
+                                
+                                Text(
+                                    text = "${scanTime}s scan",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                if (syncTime > 0) {
+                                    Text(
+                                        text = "${syncTime}s sync",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
                     SyncState.ERROR -> Icon(
                         Icons.Default.Warning,
                         contentDescription = "Error",
                         tint = Color.Red
                     )
                     SyncState.SYNCING -> Text("${(status.progress * 100).roundToInt()}%")
+                    SyncState.SCANNING -> {
+                        val elapsedSeconds = if (status.scanStartTime > 0) {
+                            (currentTime - status.scanStartTime) / 1000
+                        } else 0
+                        Text("Scanning (${elapsedSeconds}s)")
+                    }
                     else -> Text(status.status.name.lowercase().replaceFirstChar { it.uppercase() })
                 }
             }
@@ -491,11 +537,14 @@ suspend fun startSync(
         
         folders.forEachIndexed { index, folder ->
             try {
+                val scanStartTime = System.currentTimeMillis()
+                
                 // Update status to scanning
                 statuses[index] = statuses[index].copy(
                     status = SyncState.SCANNING,
                     progress = 0f,
-                    currentFile = "Scanning Android folder..."
+                    currentFile = "Scanning Android folder...",
+                    scanStartTime = scanStartTime
                 )
                 onStatusUpdate(statuses.toList())
                 
@@ -549,10 +598,12 @@ suspend fun startSync(
                     }
                     
                     if (filesToSync.isNotEmpty()) {
+                        val syncStartTime = System.currentTimeMillis()
                         statuses[index] = statuses[index].copy(
                             status = SyncState.SYNCING,
                             totalFiles = totalOperations,
-                            currentFile = "Syncing Android → PC"
+                            currentFile = "Syncing Android → PC",
+                            syncStartTime = syncStartTime
                         )
                         onStatusUpdate(statuses.toList())
                         
@@ -680,10 +731,12 @@ suspend fun startSync(
                     android.util.Log.i("FolderSync", "💻→📱 Mirror sync plan: $downloadCount downloads, $updateCount updates, $deleteCount deletions")
                     
                     if (filesToSync.isNotEmpty()) {
+                        val syncStartTime = System.currentTimeMillis()
                         statuses[index] = statuses[index].copy(
                             status = SyncState.SYNCING,
                             totalFiles = totalOperations,
-                            currentFile = "Syncing PC → Android"
+                            currentFile = "Syncing PC → Android",
+                            syncStartTime = syncStartTime
                         )
                         onStatusUpdate(statuses.toList())
                         
@@ -782,12 +835,14 @@ suspend fun startSync(
                 )
                 
                 // Update final status based on results
+                val completionTime = System.currentTimeMillis()
                 if (totalOperations == 0) {
                     statuses[index] = statuses[index].copy(
                         status = SyncState.COMPLETED,
                         progress = 1f,
                         currentFile = "No files to sync",
-                        syncSummary = syncSummary
+                        syncSummary = syncSummary,
+                        completionTime = completionTime
                     )
                 } else if (failedOperations == 0) {
                     statuses[index] = statuses[index].copy(
@@ -795,7 +850,8 @@ suspend fun startSync(
                         progress = 1f,
                         filesProcessed = completedOperations,
                         currentFile = "",
-                        syncSummary = syncSummary
+                        syncSummary = syncSummary,
+                        completionTime = completionTime
                     )
                 } else if (completedOperations > 0) {
                     statuses[index] = statuses[index].copy(
@@ -804,7 +860,8 @@ suspend fun startSync(
                         filesProcessed = completedOperations,
                         currentFile = "",
                         errorMessage = "Failed: ${failedOperations}/${totalOperations} operations. ${failedFiles.take(2).joinToString(", ")}${if (failedFiles.size > 2) "..." else ""}",
-                        syncSummary = syncSummary
+                        syncSummary = syncSummary,
+                        completionTime = completionTime
                     )
                 } else {
                     statuses[index] = statuses[index].copy(
@@ -813,7 +870,8 @@ suspend fun startSync(
                         filesProcessed = 0,
                         currentFile = "",
                         errorMessage = "Failed all ${failedOperations} operations",
-                        syncSummary = syncSummary
+                        syncSummary = syncSummary,
+                        completionTime = completionTime
                     )
                 }
                 onStatusUpdate(statuses.toList())

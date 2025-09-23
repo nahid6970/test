@@ -41,7 +41,10 @@ data class SyncStatus(
     val filesProcessed: Int = 0,
     val totalFiles: Int = 0,
     val errorMessage: String? = null,
-    val syncSummary: SyncSummary? = null
+    val syncSummary: SyncSummary? = null,
+    val scanStartTime: Long = 0L,
+    val syncStartTime: Long = 0L,
+    val completionTime: Long = 0L
 )
 
 data class SyncSummary(
