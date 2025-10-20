@@ -19,6 +19,7 @@ class OverlayService : Service() {
 
     private lateinit var windowManager: WindowManager
     private var overlayView: View? = null
+    private var recordingOverlay: View? = null
     private lateinit var recordButton: ImageButton
     private lateinit var replayButton: ImageButton
     
@@ -77,7 +78,7 @@ class OverlayService : Service() {
 
         windowManager.addView(overlayView, params)
         makeDraggable(overlayView!!, params)
-        setupTouchCapture()
+        setupManualTouchCapture()
     }
 
     private fun makeDraggable(view: View, params: WindowManager.LayoutParams) {
@@ -113,7 +114,9 @@ class OverlayService : Service() {
         recordButton.setImageResource(R.drawable.ic_stop)
         replayButton.isEnabled = false
         replayButton.alpha = 0.5f
-        Toast.makeText(this, "Recording started - Tap anywhere on screen", Toast.LENGTH_LONG).show()
+        
+        createRecordingOverlay()
+        Toast.makeText(this, "🔴 Recording - Tap anywhere on screen", Toast.LENGTH_LONG).show()
     }
 
     private fun stopRecording() {
@@ -121,24 +124,40 @@ class OverlayService : Service() {
         recordButton.setImageResource(R.drawable.ic_record)
         replayButton.isEnabled = true
         replayButton.alpha = 1.0f
-        Toast.makeText(this, "${touchActions.size} actions recorded", Toast.LENGTH_SHORT).show()
+        
+        removeRecordingOverlay()
+        val uniqueTouches = touchActions.count { it.action == MotionEvent.ACTION_DOWN }
+        Toast.makeText(this, "⏹️ Stopped - $uniqueTouches touches recorded", Toast.LENGTH_LONG).show()
     }
 
-    private fun setupTouchCapture() {
-        overlayView?.setOnTouchListener { view, event ->
-            // Check if touch is outside the button area (for recording)
-            if (isRecording && event.action == MotionEvent.ACTION_OUTSIDE) {
-                val timestamp = System.currentTimeMillis() - recordingStartTime
-                touchActions.add(TouchAction(MotionEvent.ACTION_DOWN, event.rawX, event.rawY, timestamp))
-                touchActions.add(TouchAction(MotionEvent.ACTION_UP, event.rawX, event.rawY, timestamp + 50))
+    private fun createRecordingOverlay() {
+        // Don't create fullscreen overlay - accessibility service will handle recording
+        // Just show visual indicator
+    }
+
+    private fun removeRecordingOverlay() {
+        recordingOverlay?.let {
+            try {
+                windowManager.removeView(it)
+            } catch (e: Exception) {
+                // Already removed
             }
-            false
+            recordingOverlay = null
         }
+    }
+
+    private fun setupManualTouchCapture() {
+        // Accessibility service will capture touches system-wide
     }
 
     private fun replayActions() {
         if (!TouchRecordingAccessibilityService.isServiceEnabled()) {
-            Toast.makeText(this, "Enable Accessibility Service first!", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "⚠️ Enable Accessibility Service in Settings!", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        if (touchActions.isEmpty()) {
+            Toast.makeText(this, "No touches recorded!", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -147,34 +166,44 @@ class OverlayService : Service() {
         replayButton.isEnabled = false
         recordButton.alpha = 0.5f
         replayButton.alpha = 0.5f
-        Toast.makeText(this, "Replaying ${touchActions.size} actions...", Toast.LENGTH_SHORT).show()
+        
+        Toast.makeText(this, "▶️ Replaying ${touchActions.size} touches...", Toast.LENGTH_LONG).show()
 
         var previousTimestamp = 0L
         val accessibilityService = TouchRecordingAccessibilityService.getInstance()
+        var actionCount = 0
         
-        touchActions.forEachIndexed { index, action ->
+        touchActions.forEach { action ->
             val delay = action.timestamp - previousTimestamp
             previousTimestamp = action.timestamp
             
             handler.postDelayed({
-                if (action.action == MotionEvent.ACTION_DOWN || action.action == MotionEvent.ACTION_UP) {
-                    accessibilityService?.performTouch(action.x, action.y)
+                when (action.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        accessibilityService?.performTouch(action.x, action.y, 100)
+                        actionCount++
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        // Skip moves for now, just do taps
+                    }
                 }
             }, delay)
         }
 
+        // Show completion message
         handler.postDelayed({
             isReplaying = false
             recordButton.isEnabled = true
             replayButton.isEnabled = true
             recordButton.alpha = 1.0f
             replayButton.alpha = 1.0f
-            Toast.makeText(this, "Replay completed!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "✅ Replay finished! ($actionCount touches)", Toast.LENGTH_LONG).show()
         }, previousTimestamp + 500)
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        removeRecordingOverlay()
         overlayView?.let { windowManager.removeView(it) }
     }
 }
