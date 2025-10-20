@@ -69,10 +69,13 @@ class OverlayService : Service() {
         }
 
         replayButton.setOnClickListener {
+            Toast.makeText(this, "Replay button clicked! Actions: ${touchActions.size}", Toast.LENGTH_SHORT).show()
             if (!isReplaying && touchActions.isNotEmpty()) {
                 replayActions()
             } else if (touchActions.isEmpty()) {
-                Toast.makeText(this, "No actions recorded!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "❌ No touches recorded! Tap record first.", Toast.LENGTH_LONG).show()
+            } else if (isReplaying) {
+                Toast.makeText(this, "Already replaying...", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -131,8 +134,52 @@ class OverlayService : Service() {
     }
 
     private fun createRecordingOverlay() {
-        // Don't create fullscreen overlay - accessibility service will handle recording
-        // Just show visual indicator
+        val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        } else {
+            WindowManager.LayoutParams.TYPE_PHONE
+        }
+
+        // Create a fullscreen overlay BEHIND the control buttons
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            layoutType,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            PixelFormat.TRANSLUCENT
+        )
+
+        recordingOverlay = View(this).apply {
+            setBackgroundColor(0x10FF0000) // Slight red tint to show recording
+            setOnTouchListener { _, event ->
+                if (isRecording) {
+                    val timestamp = System.currentTimeMillis() - recordingStartTime
+                    when (event.action) {
+                        MotionEvent.ACTION_DOWN -> {
+                            touchActions.add(TouchAction(MotionEvent.ACTION_DOWN, event.rawX, event.rawY, timestamp))
+                        }
+                        MotionEvent.ACTION_UP -> {
+                            touchActions.add(TouchAction(MotionEvent.ACTION_UP, event.rawX, event.rawY, timestamp))
+                        }
+                        MotionEvent.ACTION_MOVE -> {
+                            touchActions.add(TouchAction(MotionEvent.ACTION_MOVE, event.rawX, event.rawY, timestamp))
+                        }
+                    }
+                }
+                false // Don't consume - let touches pass through
+            }
+        }
+
+        try {
+            // Add recording overlay first (behind)
+            windowManager.addView(recordingOverlay, params)
+            // Then re-add control buttons on top
+            windowManager.removeView(overlayView)
+            val controlParams = overlayView!!.layoutParams as WindowManager.LayoutParams
+            windowManager.addView(overlayView, controlParams)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun removeRecordingOverlay() {
