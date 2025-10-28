@@ -1,4 +1,3 @@
 <resources>
-    <string name="app_name">Touch Recorder</string>
-    <string name="accessibility_service_description">Allows Touch Recorder to replay recorded touch gestures on your screen</string>
+    <string name="app_name">Countdown Timer</string>
 </resources>

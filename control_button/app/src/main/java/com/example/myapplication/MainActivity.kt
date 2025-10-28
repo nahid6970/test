@@ -19,10 +19,9 @@ class MainActivity : AppCompatActivity() {
 
         val startButton = findViewById<Button>(R.id.recordButton)
         val stopButton = findViewById<Button>(R.id.replayButton)
-        val accessibilityButton = findViewById<Button>(R.id.accessibilityButton)
 
-        startButton.text = "Start Overlay"
-        stopButton.text = "Stop Overlay"
+        startButton.text = "Start Timer Overlay"
+        stopButton.text = "Stop Timer Overlay"
 
         startButton.setOnClickListener {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
@@ -39,10 +38,6 @@ class MainActivity : AppCompatActivity() {
         stopButton.setOnClickListener {
             stopOverlayService()
         }
-
-        accessibilityButton.setOnClickListener {
-            openAccessibilitySettings()
-        }
     }
 
     private fun startOverlayService() {
@@ -54,17 +49,7 @@ class MainActivity : AppCompatActivity() {
     private fun stopOverlayService() {
         val intent = Intent(this, OverlayService::class.java)
         stopService(intent)
-        Toast.makeText(this, "Overlay stopped", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun openAccessibilitySettings() {
-        try {
-            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-            startActivity(intent)
-            Toast.makeText(this, "Enable 'Touch Recorder' in accessibility settings", Toast.LENGTH_LONG).show()
-        } catch (e: Exception) {
-            Toast.makeText(this, "Could not open accessibility settings", Toast.LENGTH_SHORT).show()
-        }
+        Toast.makeText(this, "Timer overlay stopped", Toast.LENGTH_SHORT).show()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

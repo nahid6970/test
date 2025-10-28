@@ -16,7 +16,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Touch Recorder"
+            android:text="Countdown Timer"
             android:textSize="28sp"
             android:textColor="#FFFFFF"
             android:textStyle="bold" />
@@ -24,7 +24,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Record and replay screen touches"
+            android:text="Floating countdown timer with speed control"
             android:textSize="14sp"
             android:textColor="#E0FFFFFF"
             android:layout_marginTop="4dp" />
@@ -57,7 +57,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="📱 Overlay Controls"
+                        android:text="⏱️ Timer Overlay"
                         android:textSize="18sp"
                         android:textStyle="bold"
                         android:textColor="#333333" />
@@ -65,7 +65,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Start the overlay to display floating buttons on your screen"
+                        android:text="Start the overlay to display a floating countdown timer"
                         android:textSize="14sp"
                         android:textColor="#666666"
                         android:layout_marginTop="8dp"
@@ -97,49 +97,6 @@
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="16dp"
-                android:elevation="2dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="⚙️ Enable Replay (Required)"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="#333333" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="To replay recorded touches, you must enable the accessibility service"
-                        android:textSize="14sp"
-                        android:textColor="#666666"
-                        android:layout_marginTop="8dp"
-                        android:layout_marginBottom="16dp" />
-
-                    <Button
-                        android:id="@+id/accessibilityButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="56dp"
-                        android:text="Open Accessibility Settings"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:backgroundTint="#FF9800" />
-
-                </LinearLayout>
-
-            </androidx.cardview.widget.CardView>
-
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
                 android:elevation="2dp">
 
                 <LinearLayout
@@ -159,7 +116,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="1. Tap 'Start Overlay' and grant permission\n\n2. Tap 'Open Accessibility Settings' and enable 'Touch Recorder'\n\n3. Floating buttons will appear on screen\n\n4. Tap red circle to start recording\n\n5. Tap on the button area to record touches\n\n6. Tap red square to stop recording\n\n7. Tap green replay to replay actions"
+                        android:text="1. Tap 'Start Timer Overlay' and grant permission\n\n2. A floating timer will appear on screen\n\n3. Tap the + button to set timer (days, hours, minutes)\n\n4. Timer will start counting down\n\n5. Tap + again to reset and restart from beginning\n\n6. Tap 'Speed' button to control timer speed (10x, 16x, 24x, etc.)\n\n7. Drag the overlay to move it around\n\n8. Tap 'Stop Timer Overlay' to remove it"
                         android:textSize="14sp"
                         android:textColor="#666666"
                         android:lineSpacingExtra="4dp"
