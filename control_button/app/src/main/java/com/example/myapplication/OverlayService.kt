@@ -65,7 +65,7 @@ class OverlayService : Service() {
 
         addButton.setOnClickListener {
             if (isTimerRunning) {
-                resetTimer()
+                stopTimer()
             } else {
                 showTimerInputDialog()
             }
@@ -156,18 +156,21 @@ class OverlayService : Service() {
         })
     }
 
-    private fun resetTimer() {
-        remainingMillis = targetTimeMillis
-        lastUpdateTime = System.currentTimeMillis()
-        isTimerRunning = true
-        runTimer()
-        Toast.makeText(this, "Timer reset!", Toast.LENGTH_SHORT).show()
+    private fun stopTimer() {
+        isTimerRunning = false
+        targetTimeMillis = 0L
+        remainingMillis = 0L
+        speedMultiplier = 1
+        handler.removeCallbacksAndMessages(null)
+        updateDisplay()
+        Toast.makeText(this, "Timer stopped!", Toast.LENGTH_SHORT).show()
     }
 
     private fun updateDisplay() {
         if (targetTimeMillis == 0L) {
             timerText.text = "Tap + to set timer"
             speedButton.visibility = View.GONE
+            addButton.text = "+"
         } else {
             val totalSeconds = (remainingMillis / 1000).toInt()
             val days = totalSeconds / 86400
@@ -178,6 +181,7 @@ class OverlayService : Service() {
             timerText.text = String.format("%dd %02dh %02dm %02ds", days, hours, minutes, seconds)
             speedButton.visibility = View.VISIBLE
             speedButton.text = if (speedMultiplier == 1) "Speed" else "${speedMultiplier}x"
+            addButton.text = "■"
         }
     }
 
