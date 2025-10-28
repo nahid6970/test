@@ -126,6 +126,7 @@ class OverlayService : Service() {
         timerText = overlayView!!.findViewById(R.id.timerText)
         addButton = overlayView!!.findViewById(R.id.addButton)
         speedButton = overlayView!!.findViewById(R.id.speedButton)
+        val closeButton = overlayView!!.findViewById<Button>(R.id.closeButton)
 
         addButton.setOnClickListener {
             if (isTimerRunning) {
@@ -138,6 +139,10 @@ class OverlayService : Service() {
         speedButton.setOnClickListener {
             // Speed is now set in timer input dialog
             Toast.makeText(this, "Current speed: ${speedMultiplier}x", Toast.LENGTH_SHORT).show()
+        }
+
+        closeButton.setOnClickListener {
+            stopSelf()
         }
 
         windowManager.addView(overlayView, params)

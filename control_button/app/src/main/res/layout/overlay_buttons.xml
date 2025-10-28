@@ -51,6 +51,18 @@
             android:padding="0dp"
             android:visibility="gone" />
 
+        <Button
+            android:id="@+id/closeButton"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:text="✕"
+            android:textSize="24sp"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/button_background"
+            android:contentDescription="Close Overlay"
+            android:layout_marginStart="8dp"
+            android:padding="0dp" />
+
     </LinearLayout>
 
 </LinearLayout>
