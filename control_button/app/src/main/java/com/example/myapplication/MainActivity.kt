@@ -42,7 +42,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun startOverlayService() {
         val intent = Intent(this, OverlayService::class.java)
-        startService(intent)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
         Toast.makeText(this, "Overlay started! You can minimize the app.", Toast.LENGTH_LONG).show()
     }
 
