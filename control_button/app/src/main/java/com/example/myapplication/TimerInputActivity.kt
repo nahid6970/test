@@ -18,18 +18,27 @@ class TimerInputActivity : AppCompatActivity() {
         val startButton = findViewById<Button>(R.id.startButton)
         val cancelButton = findViewById<Button>(R.id.cancelButton)
 
+        val speedInput = findViewById<EditText>(R.id.speedInput)
+
         startButton.setOnClickListener {
             val days = daysInput.text.toString().toIntOrNull() ?: 0
             val hours = hoursInput.text.toString().toIntOrNull() ?: 0
             val minutes = minutesInput.text.toString().toIntOrNull() ?: 0
+            val speed = speedInput.text.toString().toIntOrNull() ?: 1
 
             if (days == 0 && hours == 0 && minutes == 0) {
                 Toast.makeText(this, "Please enter a valid time", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
+            if (speed < 1) {
+                Toast.makeText(this, "Speed must be at least 1", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            OverlayService.getInstance()?.setSpeed(speed)
             OverlayService.getInstance()?.setTimer(days, hours, minutes)
-            Toast.makeText(this, "Timer started!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Timer started at ${speed}x speed!", Toast.LENGTH_SHORT).show()
             finish()
         }
 

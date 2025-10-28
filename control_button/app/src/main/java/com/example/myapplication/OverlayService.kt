@@ -136,7 +136,8 @@ class OverlayService : Service() {
         }
 
         speedButton.setOnClickListener {
-            showSpeedDialog()
+            // Speed is now set in timer input dialog
+            Toast.makeText(this, "Current speed: ${speedMultiplier}x", Toast.LENGTH_SHORT).show()
         }
 
         windowManager.addView(overlayView, params)
