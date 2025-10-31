@@ -28,7 +28,6 @@ class QuickTimerActivity : AppCompatActivity() {
         val speedInput = findViewById<EditText>(R.id.speedInput)
         val labelInput = findViewById<EditText>(R.id.labelInput)
         val startButton = findViewById<Button>(R.id.startButton)
-        val cancelButton = findViewById<Button>(R.id.cancelButton)
 
         startButton.setOnClickListener {
             val days = daysInput.text.toString().toIntOrNull() ?: 0
@@ -48,10 +47,6 @@ class QuickTimerActivity : AppCompatActivity() {
             }
 
             setGoogleClockTimer(days, hours, minutes, speed, label)
-        }
-
-        cancelButton.setOnClickListener {
-            finish()
         }
     }
 
