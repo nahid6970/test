@@ -22,32 +22,43 @@ class QuickTimerActivity : AppCompatActivity() {
             WindowManager.LayoutParams.WRAP_CONTENT
         )
 
+        val labelInput = findViewById<EditText>(R.id.labelInput)
+
+        // Set up action listener for keyboard's done button
+        labelInput.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+                submitTimer()
+                true
+            } else {
+                false
+            }
+        }
+    }
+
+    private fun submitTimer() {
         val daysInput = findViewById<EditText>(R.id.daysInput)
         val hoursInput = findViewById<EditText>(R.id.hoursInput)
         val minutesInput = findViewById<EditText>(R.id.minutesInput)
         val speedInput = findViewById<EditText>(R.id.speedInput)
         val labelInput = findViewById<EditText>(R.id.labelInput)
-        val startButton = findViewById<Button>(R.id.startButton)
+        
+        val days = daysInput.text.toString().toIntOrNull() ?: 0
+        val hours = hoursInput.text.toString().toIntOrNull() ?: 0
+        val minutes = minutesInput.text.toString().toIntOrNull() ?: 0
+        val speed = speedInput.text.toString().toIntOrNull() ?: 1
+        val label = labelInput.text.toString().trim()
 
-        startButton.setOnClickListener {
-            val days = daysInput.text.toString().toIntOrNull() ?: 0
-            val hours = hoursInput.text.toString().toIntOrNull() ?: 0
-            val minutes = minutesInput.text.toString().toIntOrNull() ?: 0
-            val speed = speedInput.text.toString().toIntOrNull() ?: 1
-            val label = labelInput.text.toString().trim()
-
-            if (days == 0 && hours == 0 && minutes == 0) {
-                Toast.makeText(this, "Please enter a valid time", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            if (speed < 1) {
-                Toast.makeText(this, "Speed must be at least 1", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            setGoogleClockTimer(days, hours, minutes, speed, label)
+        if (days == 0 && hours == 0 && minutes == 0) {
+            Toast.makeText(this, "Please enter a valid time", Toast.LENGTH_SHORT).show()
+            return
         }
+
+        if (speed < 1) {
+            Toast.makeText(this, "Speed must be at least 1", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        setGoogleClockTimer(days, hours, minutes, speed, label)
     }
 
     private fun setGoogleClockTimer(days: Int, hours: Int, minutes: Int, speed: Int, label: String) {

@@ -169,7 +169,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="number"
-                android:imeOptions="flagNoExtractUi"
+                android:imeOptions="flagNoExtractUi|actionDone"
                 android:hint="Timer"
                 android:textColorHint="#64748B"
                 android:textColor="#FFFFFF"
@@ -182,19 +182,6 @@
         </LinearLayout>
 
     </LinearLayout>
-
-    <!-- Second Row: Set Timer button centered -->
-    <Button
-        android:id="@+id/startButton"
-        android:layout_width="wrap_content"
-        android:layout_height="56dp"
-        android:text="✓"
-        android:textSize="28sp"
-        android:textColor="#FFFFFF"
-        android:backgroundTint="#00D9FF"
-        android:paddingStart="32dp"
-        android:paddingEnd="32dp"
-        android:layout_marginTop="8dp" />
 
 </LinearLayout>
 
