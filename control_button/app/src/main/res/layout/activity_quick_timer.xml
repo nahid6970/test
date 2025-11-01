@@ -168,7 +168,7 @@
                 android:id="@+id/labelInput"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="text"
+                android:inputType="number"
                 android:imeOptions="flagNoExtractUi"
                 android:hint="Timer"
                 android:textColorHint="#64748B"
