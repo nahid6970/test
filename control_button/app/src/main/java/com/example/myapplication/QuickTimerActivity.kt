@@ -32,6 +32,21 @@ class QuickTimerActivity : AppCompatActivity() {
 
         val timerInput = findViewById<EditText>(R.id.timerInput)
 
+        // Load last speed and label
+        val prefs = getSharedPreferences("TimerPrefs", MODE_PRIVATE)
+        val lastSpeed = prefs.getInt("lastSpeed", 0)
+        val lastLabel = prefs.getString("lastLabel", "") ?: ""
+        
+        // Pre-fill with last speed and label
+        if (lastSpeed > 0 || lastLabel.isNotEmpty()) {
+            val prefill = buildString {
+                if (lastSpeed > 1) append("x$lastSpeed ")
+                if (lastLabel.isNotEmpty()) append(lastLabel)
+            }.trim()
+            timerInput.setText(prefill)
+            timerInput.setSelection(0) // Cursor at start so user can type time first
+        }
+
         // Set up action listener for keyboard's done button
         timerInput.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
@@ -93,6 +108,14 @@ class QuickTimerActivity : AppCompatActivity() {
 
         if (speed < 1) {
             speed = 1
+        }
+
+        // Save speed and label for next time
+        val prefs = getSharedPreferences("TimerPrefs", MODE_PRIVATE)
+        prefs.edit().apply {
+            putInt("lastSpeed", speed)
+            putString("lastLabel", label)
+            apply()
         }
 
         setGoogleClockTimer(days, hours, minutes, speed, label)
