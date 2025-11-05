@@ -10,7 +10,8 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="12dp"
-    android:gravity="center">
+    android:gravity="center"
+    android:background="@drawable/green_border">
 
     <EditText
         android:id="@+id/timerInput"
