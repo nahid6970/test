@@ -16,6 +16,9 @@ class QuickTimerActivity : AppCompatActivity() {
         supportActionBar?.hide()
         setContentView(R.layout.activity_quick_timer)
         
+        // Make the window background transparent and rounded
+        window?.setBackgroundDrawableResource(android.R.color.transparent)
+        
         // Make the dialog smaller and position at top right
         window?.setLayout(
             (resources.displayMetrics.widthPixels * 0.4).toInt(),
