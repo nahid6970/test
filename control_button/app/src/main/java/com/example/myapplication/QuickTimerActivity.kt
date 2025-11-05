@@ -16,11 +16,16 @@ class QuickTimerActivity : AppCompatActivity() {
         supportActionBar?.hide()
         setContentView(R.layout.activity_quick_timer)
         
-        // Make the dialog larger
+        // Make the dialog smaller and position at top right
         window?.setLayout(
-            (resources.displayMetrics.widthPixels * 0.9).toInt(),
+            (resources.displayMetrics.widthPixels * 0.4).toInt(),
             WindowManager.LayoutParams.WRAP_CONTENT
         )
+        window?.attributes = window?.attributes?.apply {
+            gravity = android.view.Gravity.TOP or android.view.Gravity.END
+            x = 20 // 20px from right
+            y = 20 // 20px from top
+        }
 
         val timerInput = findViewById<EditText>(R.id.timerInput)
 
