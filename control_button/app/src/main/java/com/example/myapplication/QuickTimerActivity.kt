@@ -56,6 +56,10 @@ class QuickTimerActivity : AppCompatActivity() {
                 false
             }
         }
+
+        // Auto-focus and show keyboard
+        timerInput.requestFocus()
+        window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
     }
 
     private fun submitTimer() {
