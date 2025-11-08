@@ -14,6 +14,13 @@ class QuickTimerActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
+        
+        // Check if launched from URL scheme
+        if (intent?.action == Intent.ACTION_VIEW && intent?.data != null) {
+            handleUrlIntent(intent.data!!)
+            return
+        }
+        
         setContentView(R.layout.activity_quick_timer)
         
         // Make the window background transparent and rounded
@@ -156,5 +163,23 @@ class QuickTimerActivity : AppCompatActivity() {
                 Toast.makeText(this, "No clock app found to set timer", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    private fun handleUrlIntent(uri: android.net.Uri) {
+        // Parse URL: coctimer://set?days=1&hours=2&minutes=30&name=EventName&speed=10
+        val days = uri.getQueryParameter("days")?.toIntOrNull() ?: 0
+        val hours = uri.getQueryParameter("hours")?.toIntOrNull() ?: 0
+        val minutes = uri.getQueryParameter("minutes")?.toIntOrNull() ?: 0
+        val name = uri.getQueryParameter("name") ?: "Timer"
+        val speed = uri.getQueryParameter("speed")?.toIntOrNull() ?: 1
+
+        if (days == 0 && hours == 0 && minutes == 0) {
+            Toast.makeText(this, "Invalid timer data", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+
+        // Directly set the timer without showing UI
+        setGoogleClockTimer(days, hours, minutes, speed, name)
     }
 }
