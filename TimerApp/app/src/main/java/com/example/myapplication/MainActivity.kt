@@ -31,6 +31,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Hide action bar if it exists
+        supportActionBar?.hide()
+        
         setContentView(R.layout.activity_main)
         
         recyclerView = findViewById(R.id.recyclerView)
