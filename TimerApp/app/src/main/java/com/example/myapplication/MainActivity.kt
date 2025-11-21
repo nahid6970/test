@@ -25,7 +25,7 @@ class MainActivity : AppCompatActivity() {
     private val updateRunnable = object : Runnable {
         override fun run() {
             updateTimers()
-            handler.postDelayed(this, 100)
+            handler.postDelayed(this, 500)  // Update every 500ms instead of 100ms
         }
     }
 
@@ -47,6 +47,8 @@ class MainActivity : AppCompatActivity() {
         )
         
         recyclerView.layoutManager = LinearLayoutManager(this)
+        recyclerView.setHasFixedSize(true)
+        recyclerView.setItemViewCacheSize(20)
         recyclerView.adapter = adapter
         
         fab.setOnClickListener {
