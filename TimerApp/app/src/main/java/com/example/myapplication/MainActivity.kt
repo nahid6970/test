@@ -19,6 +19,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: TimerAdapter
     private lateinit var fab: FloatingActionButton
+    private lateinit var fabSort: FloatingActionButton
     
     private val timers = mutableListOf<Timer>()
     private val handler = Handler(Looper.getMainLooper())
@@ -39,6 +40,7 @@ class MainActivity : AppCompatActivity() {
         
         recyclerView = findViewById(R.id.recyclerView)
         fab = findViewById(R.id.fabAddTimer)
+        fabSort = findViewById(R.id.fabSort)
         
         // Load saved timers
         timers.addAll(TimerStorage.loadTimers(this))
@@ -58,7 +60,39 @@ class MainActivity : AppCompatActivity() {
             showAddTimerDialog()
         }
         
+        fabSort.setOnClickListener {
+            showSortDialog()
+        }
+        
         handler.post(updateRunnable)
+    }
+    
+    private fun showSortDialog() {
+        val sortOptions = arrayOf("Sort by Name", "Sort by Lowest Time Remaining")
+        
+        AlertDialog.Builder(this)
+            .setTitle("Sort Timers")
+            .setItems(sortOptions) { _, which ->
+                when (which) {
+                    0 -> sortByName()
+                    1 -> sortByTimeRemaining()
+                }
+            }
+            .show()
+    }
+    
+    private fun sortByName() {
+        timers.sortBy { it.name.lowercase() }
+        adapter.notifyDataSetChanged()
+        saveTimers()
+        Toast.makeText(this, "Sorted by name", Toast.LENGTH_SHORT).show()
+    }
+    
+    private fun sortByTimeRemaining() {
+        timers.sortBy { it.getRemainingMillis() }
+        adapter.notifyDataSetChanged()
+        saveTimers()
+        Toast.makeText(this, "Sorted by time remaining", Toast.LENGTH_SHORT).show()
     }
     
     private fun showAddTimerDialog() {
