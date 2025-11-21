@@ -9,8 +9,7 @@ import androidx.recyclerview.widget.RecyclerView
 
 class TimerAdapter(
     private val timers: MutableList<Timer>,
-    private val onStartPause: (Timer) -> Unit,
-    private val onReset: (Timer) -> Unit,
+    private val onEdit: (Timer) -> Unit,
     private val onDelete: (Timer) -> Unit
 ) : RecyclerView.Adapter<TimerAdapter.TimerViewHolder>() {
 
@@ -21,8 +20,7 @@ class TimerAdapter(
     class TimerViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val nameText: TextView = view.findViewById(R.id.timerName)
         val timeText: TextView = view.findViewById(R.id.timerTime)
-        val startPauseButton: Button = view.findViewById(R.id.btnStartPause)
-        val resetButton: Button = view.findViewById(R.id.btnReset)
+        val editButton: Button = view.findViewById(R.id.btnEdit)
         val deleteButton: Button = view.findViewById(R.id.btnDelete)
         
         var currentTimer: Timer? = null
@@ -41,8 +39,7 @@ class TimerAdapter(
         holder.nameText.text = timer.name
         updateTimerDisplay(holder, timer)
         
-        holder.startPauseButton.setOnClickListener { onStartPause(timer) }
-        holder.resetButton.setOnClickListener { onReset(timer) }
+        holder.editButton.setOnClickListener { onEdit(timer) }
         holder.deleteButton.setOnClickListener { onDelete(timer) }
     }
     
@@ -57,19 +54,10 @@ class TimerAdapter(
     }
     
     private fun updateTimerDisplay(holder: TimerViewHolder, timer: Timer) {
-        holder.timeText.text = timer.getFormattedTime()
-        
         if (timer.isFinished()) {
             holder.timeText.text = "FINISHED!"
-            holder.startPauseButton.isEnabled = false
         } else {
-            holder.startPauseButton.isEnabled = true
-        }
-        
-        holder.startPauseButton.text = when {
-            timer.isRunning -> "Pause"
-            timer.isPaused || timer.pausedAtMillis < timer.totalMillis -> "Resume"
-            else -> "Start"
+            holder.timeText.text = timer.getFormattedTime()
         }
     }
 

@@ -41,8 +41,7 @@ class MainActivity : AppCompatActivity() {
         
         adapter = TimerAdapter(
             timers,
-            onStartPause = { timer -> toggleTimer(timer) },
-            onReset = { timer -> resetTimer(timer) },
+            onEdit = { timer -> showEditTimerDialog(timer) },
             onDelete = { timer -> deleteTimer(timer) }
         )
         
@@ -59,10 +58,24 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun showAddTimerDialog() {
+        showTimerDialog(null)
+    }
+    
+    private fun showEditTimerDialog(timer: Timer) {
+        showTimerDialog(timer)
+    }
+    
+    private fun showTimerDialog(existingTimer: Timer?) {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_add_timer, null)
         val timerInput = dialogView.findViewById<EditText>(R.id.timerInput)
         val timerName = dialogView.findViewById<EditText>(R.id.timerName)
         val previewText = dialogView.findViewById<TextView>(R.id.previewText)
+        
+        // Pre-fill name only if editing, leave time input empty
+        existingTimer?.let {
+            timerName.setText(it.name)
+            // Leave timerInput empty so user can enter fresh time
+        }
         
         timerInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -77,11 +90,18 @@ class MainActivity : AppCompatActivity() {
             }
         })
         
+        val title = if (existingTimer == null) "Add Timer" else "Edit Timer"
+        val buttonText = if (existingTimer == null) "Add" else "Save"
+        
         AlertDialog.Builder(this)
-            .setTitle("Add Timer")
+            .setTitle(title)
             .setView(dialogView)
-            .setPositiveButton("Add") { _, _ ->
-                addTimer(timerName.text.toString(), timerInput.text.toString())
+            .setPositiveButton(buttonText) { _, _ ->
+                if (existingTimer == null) {
+                    addTimer(timerName.text.toString(), timerInput.text.toString())
+                } else {
+                    editTimer(existingTimer, timerName.text.toString(), timerInput.text.toString())
+                }
             }
             .setNegativeButton("Cancel", null)
             .show()
@@ -97,28 +117,33 @@ class MainActivity : AppCompatActivity() {
         }
         
         val timer = Timer(name = timerName, totalMillis = millis)
+        timer.start()  // Auto-start the timer
         timers.add(0, timer)
         adapter.notifyItemInserted(0)
         recyclerView.smoothScrollToPosition(0)
         saveTimers()
         
-        Toast.makeText(this, "Timer added", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Timer started", Toast.LENGTH_SHORT).show()
     }
     
-    private fun toggleTimer(timer: Timer) {
-        if (timer.isRunning) {
-            timer.pause()
-        } else {
-            timer.start()
+    private fun editTimer(timer: Timer, name: String, input: String) {
+        val timerName = name.ifEmpty { timer.name }
+        val millis = TimeParser.parseTimeInput(input)
+        
+        if (millis <= 0) {
+            Toast.makeText(this, "Invalid time format", Toast.LENGTH_SHORT).show()
+            return
         }
-        adapter.updateTimer(timer)
-        saveTimers()
-    }
-    
-    private fun resetTimer(timer: Timer) {
-        timer.reset()
-        adapter.updateTimer(timer)
-        saveTimers()
+        
+        val index = timers.indexOf(timer)
+        if (index != -1) {
+            val newTimer = Timer(id = timer.id, name = timerName, totalMillis = millis)
+            newTimer.start()  // Auto-start after edit
+            timers[index] = newTimer
+            adapter.notifyItemChanged(index)
+            saveTimers()
+            Toast.makeText(this, "Timer updated", Toast.LENGTH_SHORT).show()
+        }
     }
     
     private fun deleteTimer(timer: Timer) {
