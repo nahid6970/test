@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView
 class TimerAdapter(
     private val timers: MutableList<Timer>,
     private val onEdit: (Timer) -> Unit,
+    private val onSetClock: (Timer) -> Unit,
     private val onDelete: (Timer) -> Unit
 ) : RecyclerView.Adapter<TimerAdapter.TimerViewHolder>() {
 
@@ -24,6 +25,7 @@ class TimerAdapter(
         val nameText: TextView = view.findViewById(R.id.timerName)
         val timeText: TextView = view.findViewById(R.id.timerTime)
         val editButton: Button = view.findViewById(R.id.btnEdit)
+        val setClockButton: Button = view.findViewById(R.id.btnSetClock)
         val deleteButton: Button = view.findViewById(R.id.btnDelete)
         
         var currentTimer: Timer? = null
@@ -43,6 +45,7 @@ class TimerAdapter(
         updateTimerDisplay(holder, timer)
         
         holder.editButton.setOnClickListener { onEdit(timer) }
+        holder.setClockButton.setOnClickListener { onSetClock(timer) }
         holder.deleteButton.setOnClickListener { onDelete(timer) }
     }
     

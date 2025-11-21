@@ -1,8 +1,10 @@
 package com.example.myapplication
 
+import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.AlarmClock
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -48,6 +50,7 @@ class MainActivity : AppCompatActivity() {
         adapter = TimerAdapter(
             timers,
             onEdit = { timer -> showEditTimerDialog(timer) },
+            onSetClock = { timer -> setTimerInGoogleClock(timer) },
             onDelete = { timer -> showDeleteConfirmation(timer) }
         )
         
@@ -215,6 +218,34 @@ class MainActivity : AppCompatActivity() {
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+    
+    private fun setTimerInGoogleClock(timer: Timer) {
+        // Get remaining time in seconds
+        val remainingSeconds = (timer.getRemainingMillis() / 1000).toInt()
+        
+        if (remainingSeconds <= 0) {
+            Toast.makeText(this, "Timer has finished", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        val intent = Intent(AlarmClock.ACTION_SET_TIMER).apply {
+            putExtra(AlarmClock.EXTRA_LENGTH, remainingSeconds)
+            putExtra(AlarmClock.EXTRA_MESSAGE, timer.name)
+            putExtra(AlarmClock.EXTRA_SKIP_UI, false)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        
+        if (intent.resolveActivity(packageManager) != null) {
+            try {
+                startActivity(intent)
+                Toast.makeText(this, "Setting timer in Clock app", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(this, "No clock app found", Toast.LENGTH_SHORT).show()
+        }
     }
     
     private fun deleteTimer(timer: Timer) {
