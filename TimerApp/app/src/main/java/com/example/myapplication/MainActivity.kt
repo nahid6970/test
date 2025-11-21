@@ -6,8 +6,6 @@ import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
-import android.view.Menu
-import android.view.MenuItem
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
@@ -56,21 +54,6 @@ class MainActivity : AppCompatActivity() {
         }
         
         handler.post(updateRunnable)
-    }
-    
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.main_menu, menu)
-        return true
-    }
-    
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_add -> {
-                showAddTimerDialog()
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
     }
     
     private fun showAddTimerDialog() {
