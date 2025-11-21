@@ -1,10 +1,12 @@
 package com.example.myapplication
 
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
+import androidx.cardview.widget.CardView
 import androidx.recyclerview.widget.RecyclerView
 
 class TimerAdapter(
@@ -18,6 +20,7 @@ class TimerAdapter(
     }
 
     class TimerViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val cardView: CardView = view.findViewById(R.id.timerCard)
         val nameText: TextView = view.findViewById(R.id.timerName)
         val timeText: TextView = view.findViewById(R.id.timerTime)
         val editButton: Button = view.findViewById(R.id.btnEdit)
@@ -56,8 +59,14 @@ class TimerAdapter(
     private fun updateTimerDisplay(holder: TimerViewHolder, timer: Timer) {
         if (timer.isFinished()) {
             holder.timeText.text = "FINISHED!"
+            holder.cardView.setCardBackgroundColor(Color.parseColor("#4CAF50"))  // Green
+            holder.nameText.setTextColor(Color.WHITE)
+            holder.timeText.setTextColor(Color.WHITE)
         } else {
             holder.timeText.text = timer.getFormattedTime()
+            holder.cardView.setCardBackgroundColor(Color.WHITE)
+            holder.nameText.setTextColor(Color.parseColor("#000000"))
+            holder.timeText.setTextColor(Color.parseColor("#000000"))
         }
     }
 
