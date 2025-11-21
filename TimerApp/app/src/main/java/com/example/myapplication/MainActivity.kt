@@ -42,7 +42,7 @@ class MainActivity : AppCompatActivity() {
         adapter = TimerAdapter(
             timers,
             onEdit = { timer -> showEditTimerDialog(timer) },
-            onDelete = { timer -> deleteTimer(timer) }
+            onDelete = { timer -> showDeleteConfirmation(timer) }
         )
         
         recyclerView.layoutManager = LinearLayoutManager(this)
@@ -144,6 +144,39 @@ class MainActivity : AppCompatActivity() {
             saveTimers()
             Toast.makeText(this, "Timer updated", Toast.LENGTH_SHORT).show()
         }
+    }
+    
+    private fun showDeleteConfirmation(timer: Timer) {
+        val passwordInput = EditText(this)
+        passwordInput.hint = "Enter password"
+        passwordInput.inputType = android.text.InputType.TYPE_CLASS_NUMBER or 
+                                   android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
+        
+        val container = android.widget.FrameLayout(this)
+        val params = android.widget.FrameLayout.LayoutParams(
+            android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+            android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
+        )
+        params.leftMargin = resources.getDimensionPixelSize(R.dimen.dialog_margin)
+        params.rightMargin = resources.getDimensionPixelSize(R.dimen.dialog_margin)
+        passwordInput.layoutParams = params
+        container.addView(passwordInput)
+        
+        AlertDialog.Builder(this)
+            .setTitle("Delete Timer")
+            .setMessage("Enter password to delete \"${timer.name}\"")
+            .setView(container)
+            .setPositiveButton("Delete") { _, _ ->
+                val enteredPassword = passwordInput.text.toString()
+                if (enteredPassword == "1823") {
+                    deleteTimer(timer)
+                    Toast.makeText(this, "Timer deleted", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "Incorrect password", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
     
     private fun deleteTimer(timer: Timer) {
