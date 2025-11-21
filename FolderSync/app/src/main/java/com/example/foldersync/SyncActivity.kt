@@ -937,8 +937,11 @@ suspend fun scanAndroidFolder(context: Context, folder: SyncFolder): List<Androi
                 android.util.Log.i("FolderSync", "🚫 Ignore prefixes: '${folder.ignorePrefixes}'")
                 android.util.Log.i("FolderSync", "🚫 Ignore suffixes: '${folder.ignoreSuffixes}'")
                 android.util.Log.i("FolderSync", "🚫 Ignore folders: '${folder.ignoreFolders}'")
+                android.util.Log.i("FolderSync", "✅ Whitelist prefixes: '${folder.whitelistPrefixes}'")
+                android.util.Log.i("FolderSync", "✅ Whitelist suffixes: '${folder.whitelistSuffixes}'")
+                android.util.Log.i("FolderSync", "✅ Whitelist folders: '${folder.whitelistFolders}'")
                 val startTime = System.currentTimeMillis()
-                scanDocumentFolderParallel(it, files, "", folder.ignorePrefixes, folder.ignoreSuffixes, folder.ignoreFolders)
+                scanDocumentFolderParallel(it, files, "", folder.ignorePrefixes, folder.ignoreSuffixes, folder.ignoreFolders, folder.whitelistPrefixes, folder.whitelistSuffixes, folder.whitelistFolders)
                 val endTime = System.currentTimeMillis()
                 android.util.Log.i("FolderSync", "✅ Parallel scan completed in ${endTime - startTime}ms, found ${files.size} files")
             }
@@ -954,7 +957,7 @@ suspend fun scanAndroidFolder(context: Context, folder: SyncFolder): List<Androi
     files
 }
 
-suspend fun scanDocumentFolderParallel(documentFile: DocumentFile, files: MutableList<AndroidFile>, currentPath: String, ignorePrefixes: String, ignoreSuffixes: String, ignoreFolders: String = ""): Unit = withContext(kotlinx.coroutines.Dispatchers.IO) {
+suspend fun scanDocumentFolderParallel(documentFile: DocumentFile, files: MutableList<AndroidFile>, currentPath: String, ignorePrefixes: String, ignoreSuffixes: String, ignoreFolders: String = "", whitelistPrefixes: String = "", whitelistSuffixes: String = "", whitelistFolders: String = ""): Unit = withContext(kotlinx.coroutines.Dispatchers.IO) {
     try {
         val allFiles = documentFile.listFiles()
         android.util.Log.i("FolderSync", "📁 Scanning directory: $currentPath (${allFiles.size} items)")
@@ -974,6 +977,8 @@ suspend fun scanDocumentFolderParallel(documentFile: DocumentFile, files: Mutabl
                         // Check if folder should be ignored
                         if (shouldIgnoreFolder(folderName, ignoreFolders)) {
                             android.util.Log.d("FolderSync", "🚫 Ignoring folder: $folderName")
+                        } else if (!shouldWhitelistFolder(folderName, whitelistFolders)) {
+                            android.util.Log.d("FolderSync", "🚫 Folder not in whitelist: $folderName")
                         } else {
                             dirsList.add(file)
                         }
@@ -1001,6 +1006,12 @@ suspend fun scanDocumentFolderParallel(documentFile: DocumentFile, files: Mutabl
                         // Check if file should be ignored
                         if (shouldIgnoreFile(fileName, ignorePrefixes, ignoreSuffixes)) {
                             android.util.Log.d("FolderSync", "🚫 Ignoring file: $fileName")
+                            return@forEach
+                        }
+                        
+                        // Check if file is in whitelist
+                        if (!shouldWhitelistFile(fileName, whitelistPrefixes, whitelistSuffixes)) {
+                            android.util.Log.d("FolderSync", "🚫 File not in whitelist: $fileName")
                             return@forEach
                         }
                         
@@ -1041,7 +1052,7 @@ suspend fun scanDocumentFolderParallel(documentFile: DocumentFile, files: Mutabl
                 val folderName: String? = dir.name
                 if (!folderName.isNullOrBlank()) {
                     val subPath: String = if (currentPath.isEmpty()) folderName else "$currentPath/$folderName"
-                    scanDocumentFolderParallel(dir, files, subPath, ignorePrefixes, ignoreSuffixes, ignoreFolders)
+                    scanDocumentFolderParallel(dir, files, subPath, ignorePrefixes, ignoreSuffixes, ignoreFolders, whitelistPrefixes, whitelistSuffixes, whitelistFolders)
                 }
             } catch (e: Exception) {
                 android.util.Log.w("FolderSync", "Error scanning subdirectory: ${e.message}")
@@ -1361,11 +1372,11 @@ suspend fun scanPcFolder(serverUrl: String, folder: SyncFolder, context: Context
                     path = fileObj.getString("path"),
                     size = fileObj.getLong("size"),
                     modified = fileObj.getDouble("modified"),
-                    hash = fileObj.optString("hash", null)
+                    hash = fileObj.optString("hash", "")
                 ))
             }
             
-            // Filter out ignored files and files in ignored folders
+            // Filter out ignored files and files in ignored folders, and apply whitelist
             val pcFiles = allPcFiles.filter { pcFile ->
                 val fileName = pcFile.path.substringAfterLast("/")
                 val filePath = pcFile.path
@@ -1377,11 +1388,23 @@ suspend fun scanPcFolder(serverUrl: String, folder: SyncFolder, context: Context
                     return@filter false
                 }
                 
+                // Check if file is in whitelist
+                if (!shouldWhitelistFile(fileName, folder.whitelistPrefixes, folder.whitelistSuffixes)) {
+                    android.util.Log.d("FolderSync", "🚫 PC file not in whitelist: ${pcFile.path}")
+                    return@filter false
+                }
+                
                 // Check if file is in an ignored folder
                 val pathParts = filePath.split("/")
                 for (part in pathParts.dropLast(1)) { // Don't check the filename itself
                     if (shouldIgnoreFolder(part, folder.ignoreFolders)) {
                         android.util.Log.d("FolderSync", "🚫 Ignoring PC file in ignored folder: ${pcFile.path} (folder: $part)")
+                        return@filter false
+                    }
+                    
+                    // Check if folder is in whitelist
+                    if (!shouldWhitelistFolder(part, folder.whitelistFolders)) {
+                        android.util.Log.d("FolderSync", "🚫 PC file in folder not in whitelist: ${pcFile.path} (folder: $part)")
                         return@filter false
                     }
                 }
@@ -1678,5 +1701,54 @@ fun shouldIgnoreFolder(folderName: String, ignoreFolders: String): Boolean {
         }
     }
     
+    return false
+}
+
+fun shouldWhitelistFile(fileName: String, whitelistPrefixes: String, whitelistSuffixes: String): Boolean {
+    // If whitelist is empty, allow all files
+    if (whitelistPrefixes.isBlank() && whitelistSuffixes.isBlank()) return true
+    
+    if (fileName.isBlank()) return false
+    
+    // Parse prefixes
+    val prefixes = whitelistPrefixes.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+    for (prefix in prefixes) {
+        if (fileName.startsWith(prefix)) {
+            android.util.Log.d("FolderSync", "✅ Whitelisting file '$fileName' - matches prefix '$prefix'")
+            return true
+        }
+    }
+    
+    // Parse suffixes
+    val suffixes = whitelistSuffixes.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+    for (suffix in suffixes) {
+        if (fileName.endsWith(suffix, ignoreCase = true)) {
+            android.util.Log.d("FolderSync", "✅ Whitelisting file '$fileName' - matches suffix '$suffix'")
+            return true
+        }
+    }
+    
+    // If whitelist has entries but file doesn't match, reject it
+    android.util.Log.d("FolderSync", "🚫 Rejecting file '$fileName' - not in whitelist")
+    return false
+}
+
+fun shouldWhitelistFolder(folderName: String, whitelistFolders: String): Boolean {
+    // If whitelist is empty, allow all folders
+    if (whitelistFolders.isBlank()) return true
+    
+    if (folderName.isBlank()) return false
+    
+    // Parse folder names
+    val folders = whitelistFolders.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+    for (whitelistFolder in folders) {
+        if (folderName.equals(whitelistFolder, ignoreCase = true)) {
+            android.util.Log.d("FolderSync", "✅ Whitelisting folder '$folderName' - matches whitelist pattern '$whitelistFolder'")
+            return true
+        }
+    }
+    
+    // If whitelist has entries but folder doesn't match, reject it
+    android.util.Log.d("FolderSync", "🚫 Rejecting folder '$folderName' - not in whitelist")
     return false
 }

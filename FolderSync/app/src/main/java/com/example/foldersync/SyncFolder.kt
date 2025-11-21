@@ -15,7 +15,10 @@ data class SyncFolder(
     val pcToAndroidMode: SyncMode = SyncMode.COPY_AND_DELETE,
     val ignorePrefixes: String = "",
     val ignoreSuffixes: String = "",
-    val ignoreFolders: String = ""
+    val ignoreFolders: String = "",
+    val whitelistPrefixes: String = "",
+    val whitelistSuffixes: String = "",
+    val whitelistFolders: String = ""
 ) {
     // Helper property to get Uri from String
     val androidUri: Uri?

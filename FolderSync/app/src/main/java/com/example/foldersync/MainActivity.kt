@@ -416,18 +416,21 @@ fun MainScreen(
             folder = folderForIgnoreList!!,
             currentPrefixes = folderForIgnoreList!!.ignorePrefixes,
             currentSuffixes = folderForIgnoreList!!.ignoreSuffixes,
-            onSave = { newPrefixes, newSuffixes, newFolders ->
+            onSave = { newPrefixes, newSuffixes, newFolders, newWhitelistPrefixes, newWhitelistSuffixes, newWhitelistFolders ->
                 syncFolders = syncFolders.map { 
                     if (it.id == folderForIgnoreList!!.id) {
                         it.copy(
                             ignorePrefixes = newPrefixes,
                             ignoreSuffixes = newSuffixes,
-                            ignoreFolders = newFolders
+                            ignoreFolders = newFolders,
+                            whitelistPrefixes = newWhitelistPrefixes,
+                            whitelistSuffixes = newWhitelistSuffixes,
+                            whitelistFolders = newWhitelistFolders
                         )
                     } else it 
                 }
                 saveSyncFolders(context, syncFolders)
-                Toast.makeText(context, "Ignore list updated for ${folderForIgnoreList!!.name}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Filter settings updated for ${folderForIgnoreList!!.name}", Toast.LENGTH_SHORT).show()
                 showIgnoreList = false
                 folderForIgnoreList = null
             },
@@ -1255,82 +1258,179 @@ fun IgnoreListDialog(
     folder: SyncFolder,
     currentPrefixes: String,
     currentSuffixes: String,
-    onSave: (String, String, String) -> Unit,
+    onSave: (String, String, String, String, String, String) -> Unit,
     onDismiss: () -> Unit
 ) {
     var tempPrefixes by remember { mutableStateOf(currentPrefixes) }
     var tempSuffixes by remember { mutableStateOf(currentSuffixes) }
     var tempFolders by remember { mutableStateOf(folder.ignoreFolders) }
+    var tempWhitelistPrefixes by remember { mutableStateOf(folder.whitelistPrefixes) }
+    var tempWhitelistSuffixes by remember { mutableStateOf(folder.whitelistSuffixes) }
+    var tempWhitelistFolders by remember { mutableStateOf(folder.whitelistFolders) }
     
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { 
             Text(
-                text = "🚫 Ignore List: ${folder.name}",
+                text = "🎯 Filter Settings: ${folder.name}",
                 color = MaterialTheme.colorScheme.primary
             ) 
         },
         text = {
-            Column(
+            LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    text = "Configure files to ignore during sync:",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                item {
+                    Text(
+                        text = "Configure which files to sync:",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
                 
-                // Prefix Section
-                Text(
-                    text = "Ignore files starting with:",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
-                )
+                // Whitelist Section
+                item {
+                    Text(
+                        text = "✅ WHITELIST (Only sync these)",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
                 
-                OutlinedTextField(
-                    value = tempPrefixes,
-                    onValueChange = { tempPrefixes = it },
-                    label = { Text("Prefixes (comma-separated)") },
-                    placeholder = { Text("., ~, temp (optional)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                item {
+                    Text(
+                        text = "Only sync files starting with:",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    OutlinedTextField(
+                        value = tempWhitelistPrefixes,
+                        onValueChange = { tempWhitelistPrefixes = it },
+                        label = { Text("Prefixes (comma-separated)") },
+                        placeholder = { Text("photo_, video_ (leave empty to allow all)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
                 
-                // Suffix Section
-                Text(
-                    text = "Ignore files ending with:",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
-                )
+                item {
+                    Text(
+                        text = "Only sync files ending with:",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    OutlinedTextField(
+                        value = tempWhitelistSuffixes,
+                        onValueChange = { tempWhitelistSuffixes = it },
+                        label = { Text("Suffixes (comma-separated)") },
+                        placeholder = { Text(".jpg, .png, .mp4 (leave empty to allow all)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
                 
-                OutlinedTextField(
-                    value = tempSuffixes,
-                    onValueChange = { tempSuffixes = it },
-                    label = { Text("Suffixes (comma-separated)") },
-                    placeholder = { Text(".tmp, .pyc, .log (optional)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                item {
+                    Text(
+                        text = "Only sync folders named:",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    OutlinedTextField(
+                        value = tempWhitelistFolders,
+                        onValueChange = { tempWhitelistFolders = it },
+                        label = { Text("Folder names (comma-separated)") },
+                        placeholder = { Text("Photos, Videos (leave empty to allow all)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
                 
-                // Folder Section
-                Text(
-                    text = "Ignore folders named:",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
-                )
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
                 
-                OutlinedTextField(
-                    value = tempFolders,
-                    onValueChange = { tempFolders = it },
-                    label = { Text("Folder names (comma-separated)") },
-                    placeholder = { Text(".git, __pycache__, node_modules (optional)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                // Ignore Section
+                item {
+                    Text(
+                        text = "🚫 IGNORE LIST (Never sync these)",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
                 
-
+                item {
+                    Text(
+                        text = "Ignore files starting with:",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    OutlinedTextField(
+                        value = tempPrefixes,
+                        onValueChange = { tempPrefixes = it },
+                        label = { Text("Prefixes (comma-separated)") },
+                        placeholder = { Text("., ~, temp (optional)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                
+                item {
+                    Text(
+                        text = "Ignore files ending with:",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    OutlinedTextField(
+                        value = tempSuffixes,
+                        onValueChange = { tempSuffixes = it },
+                        label = { Text("Suffixes (comma-separated)") },
+                        placeholder = { Text(".tmp, .pyc, .log (optional)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                
+                item {
+                    Text(
+                        text = "Ignore folders named:",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    OutlinedTextField(
+                        value = tempFolders,
+                        onValueChange = { tempFolders = it },
+                        label = { Text("Folder names (comma-separated)") },
+                        placeholder = { Text(".git, __pycache__, node_modules (optional)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Note: Whitelist is checked first. If empty, all files are allowed. Ignore list is then applied to filter out unwanted files.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                    )
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    onSave(tempPrefixes.trim(), tempSuffixes.trim(), tempFolders.trim())
+                    onSave(
+                        tempPrefixes.trim(), 
+                        tempSuffixes.trim(), 
+                        tempFolders.trim(),
+                        tempWhitelistPrefixes.trim(),
+                        tempWhitelistSuffixes.trim(),
+                        tempWhitelistFolders.trim()
+                    )
                 }
             ) {
                 Text("Save")
