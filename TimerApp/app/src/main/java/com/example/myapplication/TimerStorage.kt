@@ -23,7 +23,7 @@ object TimerStorage {
         val type = object : TypeToken<List<Timer>>() {}.type
         val timers: List<Timer> = gson.fromJson(json, type)
         
-        // Reset running state when loading
-        return timers.map { it.copy(isRunning = false) }.toMutableList()
+        // Timers keep running - no need to reset state
+        return timers.toMutableList()
     }
 }

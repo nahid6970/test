@@ -105,20 +105,16 @@ class MainActivity : AppCompatActivity() {
     
     private fun toggleTimer(timer: Timer) {
         if (timer.isRunning) {
-            timer.isRunning = false
-            timer.isPaused = true
+            timer.pause()
         } else {
-            timer.isRunning = true
-            timer.isPaused = false
+            timer.start()
         }
         adapter.updateTimer(timer)
         saveTimers()
     }
     
     private fun resetTimer(timer: Timer) {
-        timer.remainingMillis = timer.totalMillis
-        timer.isRunning = false
-        timer.isPaused = false
+        timer.reset()
         adapter.updateTimer(timer)
         saveTimers()
     }
@@ -137,13 +133,15 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun updateTimers() {
+        var hasFinished = false
         timers.forEach { timer ->
-            if (timer.isRunning && !timer.isFinished()) {
-                timer.remainingMillis -= 100
-                if (timer.remainingMillis <= 0) {
-                    timer.remainingMillis = 0
-                    timer.isRunning = false
-                    Toast.makeText(this, "${timer.name} finished!", Toast.LENGTH_SHORT).show()
+            if (timer.isRunning) {
+                if (timer.isFinished()) {
+                    timer.pause()
+                    if (!hasFinished) {
+                        Toast.makeText(this, "${timer.name} finished!", Toast.LENGTH_SHORT).show()
+                        hasFinished = true
+                    }
                 }
                 adapter.updateTimer(timer)
             }

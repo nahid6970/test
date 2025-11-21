@@ -43,7 +43,7 @@ class TimerAdapter(
         
         holder.startPauseButton.text = when {
             timer.isRunning -> "Pause"
-            timer.isPaused || timer.remainingMillis < timer.totalMillis -> "Resume"
+            timer.isPaused || timer.pausedAtMillis < timer.totalMillis -> "Resume"
             else -> "Start"
         }
         
