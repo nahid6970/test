@@ -8,13 +8,16 @@ import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -32,28 +36,99 @@ import kotlinx.coroutines.withContext
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.asRequestBody
-import okio.BufferedSink
-import okio.ForwardingSink
-import okio.Sink
-import okio.buffer
 import java.io.File
 import java.io.FileOutputStream
-import java.io.IOException
 import kotlin.math.roundToInt
 
 class ShareActivity : ComponentActivity() {
     
     private val client = OkHttpClient()
+    private var sharedFiles: List<SharedFile> = emptyList()
+    
+    private val qrScannerLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val scannedUrl = result.data?.getStringExtra("scanned_url")
+            if (scannedUrl != null) {
+                // Proceed with Android upload
+                startUpload(scannedUrl, ShareDestination.ANDROID)
+            } else {
+                Toast.makeText(this, "Failed to get device URL", Toast.LENGTH_SHORT).show()
+                finish()
+            }
+        } else {
+            finish()
+        }
+    }
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        val sharedFiles = getSharedFiles()
+        sharedFiles = getSharedFiles()
         
+        setContent {
+            MyApplicationTheme {
+                DestinationSelectionScreen(
+                    filesCount = sharedFiles.size,
+                    onDestinationSelected = { destination ->
+                        when (destination) {
+                            ShareDestination.PC -> {
+                                val sharedPrefs = getSharedPreferences("file_share_prefs", MODE_PRIVATE)
+                                val pcUrl = sharedPrefs.getString("server_url", "http://192.168.1.100:5002") 
+                                    ?: "http://192.168.1.100:5002"
+                                startUpload(pcUrl, ShareDestination.PC)
+                            }
+                            ShareDestination.ANDROID -> {
+                                // Check if we have a saved Android device URL
+                                val sharedPrefs = getSharedPreferences("file_share_prefs", MODE_PRIVATE)
+                                val savedAndroidUrl = sharedPrefs.getString("android_device_url", null)
+                                
+                                if (savedAndroidUrl != null) {
+                                    // Ask if they want to use saved device or scan new
+                                    showAndroidDeviceChoice(savedAndroidUrl)
+                                } else {
+                                    // Launch QR scanner
+                                    launchQRScanner()
+                                }
+                            }
+                        }
+                    },
+                    onCancel = { finish() }
+                )
+            }
+        }
+    }
+    
+    private fun showAndroidDeviceChoice(savedUrl: String) {
+        setContent {
+            MyApplicationTheme {
+                AndroidDeviceChoiceDialog(
+                    savedUrl = savedUrl,
+                    onUseSaved = {
+                        startUpload(savedUrl, ShareDestination.ANDROID)
+                    },
+                    onScanNew = {
+                        launchQRScanner()
+                    },
+                    onCancel = { finish() }
+                )
+            }
+        }
+    }
+    
+    private fun launchQRScanner() {
+        val intent = Intent(this, QRScannerActivity::class.java)
+        qrScannerLauncher.launch(intent)
+    }
+    
+    private fun startUpload(serverUrl: String, destination: ShareDestination) {
         setContent {
             MyApplicationTheme {
                 ShareScreen(
                     files = sharedFiles,
+                    serverUrl = serverUrl,
+                    destination = destination,
                     onCancel = { finish() }
                 )
             }
@@ -67,7 +142,6 @@ class ShareActivity : ComponentActivity() {
             Intent.ACTION_SEND -> {
                 intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)?.let { uri ->
                     if (isDirectory(uri)) {
-                        // If it's a directory, get all files recursively
                         files.addAll(getFilesFromDirectory(uri))
                     } else {
                         val fileName = getFileName(uri)
@@ -80,7 +154,6 @@ class ShareActivity : ComponentActivity() {
                 intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)?.let { uris ->
                     uris.forEach { uri ->
                         if (isDirectory(uri)) {
-                            // If it's a directory, get all files recursively
                             files.addAll(getFilesFromDirectory(uri))
                         } else {
                             val fileName = getFileName(uri)
@@ -141,7 +214,6 @@ class ShareActivity : ComponentActivity() {
                 
                 documentFile.listFiles().forEach { childFile ->
                     if (childFile.isDirectory) {
-                        // Recursively get files from subdirectory
                         files.addAll(getFilesFromDirectory(childFile.uri, currentPath))
                     } else if (childFile.isFile) {
                         val fileName = childFile.name ?: "unknown_file"
@@ -157,7 +229,6 @@ class ShareActivity : ComponentActivity() {
                 }
             }
         } catch (e: Exception) {
-            // If directory scanning fails, treat as single file
             val fileName = getFileName(directoryUri)
             val fileSize = getFileSize(directoryUri)
             files.add(SharedFile(directoryUri, fileName, fileSize))
@@ -165,38 +236,10 @@ class ShareActivity : ComponentActivity() {
         
         return files
     }
-    
-    // This function is no longer needed as we handle uploads directly in the Composable
-    
-    private suspend fun uploadFile(sharedFile: SharedFile, serverUrl: String) = withContext(Dispatchers.IO) {
-        val inputStream = contentResolver.openInputStream(sharedFile.uri)
-        val tempFile = File(cacheDir, sharedFile.fileName)
-        
-        inputStream?.use { input ->
-            FileOutputStream(tempFile).use { output ->
-                input.copyTo(output)
-            }
-        }
-        
-        val requestBody = tempFile.asRequestBody("application/octet-stream".toMediaType())
-        val multipartBody = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("file", sharedFile.fileName, requestBody)
-            .build()
-        
-        val request = Request.Builder()
-            .url(serverUrl)
-            .post(multipartBody)
-            .build()
-        
-        client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                throw IOException("Upload failed: ${response.code}")
-            }
-        }
-        
-        tempFile.delete()
-    }
+}
+
+enum class ShareDestination {
+    PC, ANDROID
 }
 
 data class SharedFile(
@@ -219,18 +262,180 @@ enum class UploadStatus {
     PENDING, UPLOADING, COMPLETED, ERROR
 }
 
+@Composable
+fun DestinationSelectionScreen(
+    filesCount: Int,
+    onDestinationSelected: (ShareDestination) -> Unit,
+    onCancel: () -> Unit
+) {
+    Dialog(onDismissRequest = onCancel) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Share $filesCount file${if (filesCount > 1) "s" else ""} to:",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // PC Option
+                Button(
+                    onClick = { onDestinationSelected(ShareDestination.PC) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = "PC",
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("Share to PC", fontSize = 16.sp)
+                    }
+                }
+                
+                // Android Option
+                Button(
+                    onClick = { onDestinationSelected(ShareDestination.ANDROID) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    )
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Phone,
+                            contentDescription = "Android",
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("Share to Android", fontSize = 16.sp)
+                    }
+                }
+                
+                OutlinedButton(
+                    onClick = onCancel,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Cancel")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AndroidDeviceChoiceDialog(
+    savedUrl: String,
+    onUseSaved: () -> Unit,
+    onScanNew: () -> Unit,
+    onCancel: () -> Unit
+) {
+    Dialog(onDismissRequest = onCancel) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Select Android Device",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Text(
+                    text = "Use previously connected device or scan a new QR code",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                // Saved device
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = "Last Connected Device:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = savedUrl,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                
+                Button(
+                    onClick = onUseSaved,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Use This Device")
+                }
+                
+                OutlinedButton(
+                    onClick = onScanNew,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Search, contentDescription = "Scan")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Scan New QR Code")
+                }
+                
+                TextButton(
+                    onClick = onCancel,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Cancel")
+                }
+            }
+        }
+    }
+}
+
+// Continue with ShareScreen from the original ShareActivity...
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShareScreen(
     files: List<SharedFile>,
+    serverUrl: String,
+    destination: ShareDestination,
     onCancel: () -> Unit
 ) {
     val context = LocalContext.current
-    val sharedPrefs = context.getSharedPreferences("file_share_prefs", Context.MODE_PRIVATE)
     
-    var serverUrl by remember { 
-        mutableStateOf(sharedPrefs.getString("server_url", "http://192.168.1.100:5002") ?: "http://192.168.1.100:5002") 
-    }
     var isUploading by remember { mutableStateOf(false) }
     var uploadProgress by remember { mutableStateOf<List<UploadProgress>>(emptyList()) }
     var overallProgress by remember { mutableStateOf(0f) }
@@ -238,10 +443,15 @@ fun ShareScreen(
     
     val scope = rememberCoroutineScope()
     
+    val destinationLabel = when (destination) {
+        ShareDestination.PC -> "Share to PC"
+        ShareDestination.ANDROID -> "Share to Android"
+    }
+    
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Share to PC") }
+                title = { Text(destinationLabel) }
             )
         }
     ) { paddingValues ->
@@ -319,19 +529,25 @@ fun ShareScreen(
             }
             
             if (!isUploading) {
-                OutlinedTextField(
-                    value = serverUrl,
-                    onValueChange = { serverUrl = it },
-                    label = { Text("Server URL") },
+                Card(
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !isUploading
-                )
-                
-                Text(
-                    text = "Server URL is loaded from settings. Change it in the main app if needed.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = "Destination:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = serverUrl,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
             
             Row(
@@ -361,11 +577,10 @@ fun ShareScreen(
                             
                             scope.launch {
                                 try {
-                                    // Check server connection first
                                     Toast.makeText(context, "Checking server connection...", Toast.LENGTH_SHORT).show()
                                     
                                     if (!checkServerConnection(serverUrl)) {
-                                        Toast.makeText(context, "Cannot connect to server. Check IP address and ensure server is running.", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(context, "Cannot connect to server. Check connection and try again.", Toast.LENGTH_LONG).show()
                                         isUploading = false
                                         return@launch
                                     }
@@ -380,7 +595,6 @@ fun ShareScreen(
                                             uploadProgress = updatedProgress
                                             overallProgress = updatedProgress.map { it.progress }.average().toFloat()
                                             
-                                            // Calculate total upload speed (only from actively uploading files)
                                             val activeUploads = updatedProgress.filter { 
                                                 it.status == UploadStatus.UPLOADING && 
                                                 !it.uploadSpeed.contains("Retrying") &&
@@ -437,7 +651,6 @@ fun FileInfoCard(file: SharedFile, index: Int) {
             modifier = Modifier.padding(16.dp)
         ) {
             if (file.fileName.contains("/")) {
-                // Show directory structure
                 val pathParts = file.fileName.split("/")
                 val fileName = pathParts.last()
                 val directory = pathParts.dropLast(1).joinToString("/")
@@ -556,5 +769,3 @@ fun FileProgressCard(progress: UploadProgress) {
         }
     }
 }
-
-// Functions moved to UploadUtils.kt

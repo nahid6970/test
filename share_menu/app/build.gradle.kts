@@ -60,6 +60,18 @@ dependencies {
     // DocumentFile for directory handling
     implementation("androidx.documentfile:documentfile:1.0.1")
     
+    // QR Code scanning and generation
+    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+    
+    // HTTP server for Android-to-Android sharing
+    implementation("org.nanohttpd:nanohttpd:2.3.1")
+    
+    // CameraX for QR scanning
+    implementation("androidx.camera:camera-camera2:1.3.1")
+    implementation("androidx.camera:camera-lifecycle:1.3.1")
+    implementation("androidx.camera:camera-view:1.3.1")
+    
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
