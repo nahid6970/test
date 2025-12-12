@@ -44,6 +44,7 @@ class ShareActivity : ComponentActivity() {
     
     private val client = OkHttpClient()
     private var sharedFiles: List<SharedFile> = emptyList()
+    private var destinationSelected = false
     
     private val qrScannerLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -52,6 +53,7 @@ class ShareActivity : ComponentActivity() {
             val scannedUrl = result.data?.getStringExtra("scanned_url")
             if (scannedUrl != null) {
                 // Proceed with Android upload
+                destinationSelected = true
                 startUpload(scannedUrl, ShareDestination.ANDROID)
             } else {
                 Toast.makeText(this, "Failed to get device URL", Toast.LENGTH_SHORT).show()
@@ -67,11 +69,17 @@ class ShareActivity : ComponentActivity() {
         
         sharedFiles = getSharedFiles()
         
+        // If destination already selected, don't show selection again
+        if (destinationSelected) {
+            return
+        }
+        
         setContent {
             MyApplicationTheme {
                 DestinationSelectionScreen(
                     filesCount = sharedFiles.size,
                     onDestinationSelected = { destination ->
+                        destinationSelected = true
                         when (destination) {
                             ShareDestination.PC -> {
                                 val sharedPrefs = getSharedPreferences("file_share_prefs", MODE_PRIVATE)

@@ -76,7 +76,10 @@ class AndroidFileServer : Service() {
     
     private inner class FileHttpServer(port: Int, private val context: android.content.Context) : NanoHTTPD(port) {
         
-        private val uploadDir: File = File(context.getExternalFilesDir(null), "MyShareReceived").apply {
+        private val uploadDir: File = File(
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+            "MyShareReceived"
+        ).apply {
             if (!exists()) {
                 mkdirs()
             }

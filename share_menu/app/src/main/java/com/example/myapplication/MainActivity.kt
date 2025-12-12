@@ -276,6 +276,15 @@ fun MainScreen(
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth()
                         )
+                        
+                        Text(
+                            text = "Files saved to: Downloads/MyShareReceived",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                            fontWeight = FontWeight.Medium
+                        )
                     } else if (!isServerRunning) {
                         Text(
                             text = "Start the server to receive files from other devices",
