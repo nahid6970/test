@@ -86,7 +86,7 @@ class QRScannerActivity : ComponentActivity() {
             setDesiredBarcodeFormats(ScanOptions.QR_CODE)
             setPrompt("Scan the QR code from another device")
             setBeepEnabled(true)
-            setOrientationLocked(false)
+            setOrientationLocked(true)
         }
         scanLauncher.launch(options)
     }
