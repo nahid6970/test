@@ -244,13 +244,15 @@ suspend fun checkServerConnection(serverUrl: String): Boolean = withContext(Disp
             
         val request = Request.Builder()
             .url(serverUrl)
-            .head() // Use HEAD request for faster check
+            .get() // Use GET request instead of HEAD for better compatibility
             .build()
             
         client.newCall(request).execute().use { response ->
-            response.isSuccessful
+            android.util.Log.d("UploadUtils", "Server check: ${response.code} - ${response.message}")
+            response.isSuccessful || response.code == 200
         }
     } catch (e: Exception) {
+        android.util.Log.e("UploadUtils", "Server connection check failed: ${e.message}", e)
         false
     }
 }

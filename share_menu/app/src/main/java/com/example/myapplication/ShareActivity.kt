@@ -577,15 +577,19 @@ fun ShareScreen(
                             
                             scope.launch {
                                 try {
-                                    Toast.makeText(context, "Checking server connection...", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Connecting to server...", Toast.LENGTH_SHORT).show()
+                                    android.util.Log.d("ShareActivity", "Attempting to connect to: $serverUrl")
                                     
-                                    if (!checkServerConnection(serverUrl)) {
-                                        Toast.makeText(context, "Cannot connect to server. Check connection and try again.", Toast.LENGTH_LONG).show()
+                                    val connectionOk = checkServerConnection(serverUrl)
+                                    android.util.Log.d("ShareActivity", "Connection check result: $connectionOk")
+                                    
+                                    if (!connectionOk) {
+                                        Toast.makeText(context, "Cannot reach server at $serverUrl. Ensure server is running and both devices are on same WiFi.", Toast.LENGTH_LONG).show()
                                         isUploading = false
                                         return@launch
                                     }
                                     
-                                    Toast.makeText(context, "Server connected! Starting upload...", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Connected! Starting upload...", Toast.LENGTH_SHORT).show()
                                     
                                     uploadFilesWithProgress(
                                         context = context,

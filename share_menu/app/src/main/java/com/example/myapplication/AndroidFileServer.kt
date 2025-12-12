@@ -36,7 +36,17 @@ class AndroidFileServer : Service() {
             
             httpServer = FileHttpServer(port, applicationContext)
             httpServer?.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false)
-            Log.d("AndroidFileServer", "Server started on port $port")
+            
+            val isAlive = httpServer?.isAlive == true
+            val listeningPort = httpServer?.listeningPort ?: 0
+            
+            Log.d("AndroidFileServer", "Server started - Alive: $isAlive, Port: $listeningPort")
+            
+            if (!isAlive) {
+                Log.e("AndroidFileServer", "Server started but not alive!")
+                return false
+            }
+            
             true
         } catch (e: Exception) {
             Log.e("AndroidFileServer", "Failed to start server: ${e.message}", e)
@@ -75,18 +85,21 @@ class AndroidFileServer : Service() {
         
         override fun serve(session: IHTTPSession): Response {
             val uri = session.uri
+            val method = session.method
+            Log.d("FileHttpServer", "Request: $method $uri from ${session.remoteIpAddress}")
             
             return when {
-                uri == "/" && session.method == Method.GET -> {
+                uri == "/" && method == Method.GET -> {
                     serveHomePage()
                 }
-                uri == "/" && session.method == Method.POST -> {
+                uri == "/" && method == Method.POST -> {
                     handleFileUpload(session)
                 }
                 uri.startsWith("/files/") -> {
                     serveFile(uri.substring(7))
                 }
                 else -> {
+                    Log.w("FileHttpServer", "Not found: $method $uri")
                     newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "Not Found")
                 }
             }
