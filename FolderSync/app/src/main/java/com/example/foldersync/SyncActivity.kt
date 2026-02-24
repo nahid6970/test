@@ -687,7 +687,6 @@ suspend fun startSync(
                                     }
                                     SyncAction.DELETE -> {
                                         try {
-                                            // Delete file from PC server
                                             deleteFileFromServer(serverUrl, folder, fileToSync.pcFile!!, context)
                                             completedOperations++
                                             deletedFiles.add("💻 ${fileToSync.pcFile.path}")
@@ -696,6 +695,37 @@ suspend fun startSync(
                                             failedOperations++
                                             failedFiles.add("🗑️💻 ${fileToSync.pcFile!!.path}")
                                             android.util.Log.e("FolderSync", "Delete failed for ${fileToSync.pcFile.path}: ${deleteException.message}")
+                                        }
+                                    }
+                                    SyncAction.RENAME -> {
+                                        try {
+                                            val androidFile = fileToSync.androidFile
+                                            val oldPath = fileToSync.oldPath
+                                            if (androidFile != null && oldPath != null) {
+                                                val newPath = if (androidFile.relativePath.isEmpty()) {
+                                                    androidFile.name
+                                                } else {
+                                                    "${androidFile.relativePath}/${androidFile.name}"
+                                                }
+                                                
+                                                if (renameFileOnPc(serverUrl, folder, oldPath, newPath, context)) {
+                                                    completedOperations++
+                                                    updatedFiles.add("📱→💻 🔄 Renamed: $oldPath → $newPath")
+                                                    android.util.Log.i("FolderSync", "Successfully renamed on PC: $oldPath → $newPath")
+                                                } else {
+                                                    uploadFileToServer(context, serverUrl, folder, androidFile, isUpdate = false)
+                                                    completedOperations++
+                                                    uploadedFiles.add(androidFile.name)
+                                                    android.util.Log.w("FolderSync", "Rename failed, uploaded instead: ${androidFile.name}")
+                                                }
+                                            } else {
+                                                android.util.Log.e("FolderSync", "RENAME action but androidFile or oldPath is null")
+                                                completedOperations++
+                                            }
+                                        } catch (renameException: Exception) {
+                                            failedOperations++
+                                            failedFiles.add("🔄 ${fileToSync.androidFile?.name ?: "unknown"}")
+                                            android.util.Log.e("FolderSync", "Rename failed: ${renameException.message}")
                                         }
                                     }
                                     else -> {
@@ -710,7 +740,7 @@ suspend fun startSync(
                                 android.util.Log.e("FolderSync", "Sync failed for $fileName: ${syncException.message}")
                             }
                             
-                            delay(100)
+                            delay(10)
                         }
                     }
                 }
@@ -836,7 +866,7 @@ suspend fun startSync(
                                 android.util.Log.e("FolderSync", "Sync failed for $fileName: ${syncException.message}")
                             }
                             
-                            delay(100)
+                            delay(10)
                         }
                     }
                 }
@@ -1040,10 +1070,7 @@ suspend fun scanDocumentFolderParallel(documentFile: DocumentFile, files: Mutabl
                 files.addAll(batchResults)
             }
             
-            // Small delay to prevent overwhelming the system
-            if (batches.size > 1) {
-                kotlinx.coroutines.delay(10)
-            }
+
         }
         
         // Process directories recursively
@@ -1547,15 +1574,113 @@ suspend fun deleteFileFromServer(serverUrl: String, folder: SyncFolder, file: Pc
 data class FileToSync(
     val androidFile: AndroidFile?,
     val pcFile: PcFile?,
-    val action: SyncAction
+    val action: SyncAction,
+    val oldPath: String? = null
 )
 
 enum class SyncAction {
-    UPLOAD,      // Upload Android file to PC
-    DOWNLOAD,    // Download PC file to Android
-    SKIP,        // Skip due to conflict or already exists
-    DELETE,      // Delete file
-    UPDATE       // Update file (newer version available)
+    UPLOAD,
+    DOWNLOAD,
+    SKIP,
+    DELETE,
+    UPDATE,
+    RENAME
+}
+
+suspend fun calculateAndroidFileHash(context: Context, androidFile: AndroidFile): String? = withContext(kotlinx.coroutines.Dispatchers.IO) {
+    try {
+        val inputStream = context.contentResolver.openInputStream(androidFile.uri) ?: return@withContext null
+        val digest = java.security.MessageDigest.getInstance("MD5")
+        val buffer = ByteArray(65536)
+        
+        inputStream.use { stream ->
+            var bytesRead: Int
+            while (stream.read(buffer).also { bytesRead = it } != -1) {
+                digest.update(buffer, 0, bytesRead)
+            }
+        }
+        
+        digest.digest().joinToString("") { "%02x".format(it) }
+    } catch (e: Exception) {
+        android.util.Log.e("FolderSync", "Error calculating hash: ${e.message}")
+        null
+    }
+}
+
+suspend fun fetchPcFileHashes(serverUrl: String, folder: SyncFolder, filePaths: List<String>, context: Context): Map<String, String> = withContext(kotlinx.coroutines.Dispatchers.IO) {
+    try {
+        val timeoutSeconds = getTimeoutSeconds(context)
+        val clientBuilder = okhttp3.OkHttpClient.Builder()
+        
+        if (timeoutSeconds > 0) {
+            clientBuilder
+                .connectTimeout(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS)
+        }
+        
+        val client = clientBuilder.build()
+        
+        val requestBody = org.json.JSONObject().apply {
+            put("folder_path", folder.pcPath)
+            put("file_paths", org.json.JSONArray(filePaths))
+        }.toString().toRequestBody("application/json".toMediaType())
+        
+        val request = okhttp3.Request.Builder()
+            .url("$serverUrl/api/hash-files")
+            .post(requestBody)
+            .build()
+        
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return@withContext emptyMap()
+            
+            val responseBody = response.body?.string() ?: return@withContext emptyMap()
+            val jsonResponse = org.json.JSONObject(responseBody)
+            val hashedFiles = jsonResponse.getJSONArray("hashed_files")
+            
+            val hashMap = mutableMapOf<String, String>()
+            for (i in 0 until hashedFiles.length()) {
+                val fileObj = hashedFiles.getJSONObject(i)
+                hashMap[fileObj.getString("path")] = fileObj.getString("hash")
+            }
+            hashMap
+        }
+    } catch (e: Exception) {
+        android.util.Log.e("FolderSync", "Error fetching PC hashes: ${e.message}")
+        emptyMap()
+    }
+}
+
+suspend fun renameFileOnPc(serverUrl: String, folder: SyncFolder, oldPath: String, newPath: String, context: Context): Boolean = withContext(kotlinx.coroutines.Dispatchers.IO) {
+    try {
+        val timeoutSeconds = getTimeoutSeconds(context)
+        val clientBuilder = okhttp3.OkHttpClient.Builder()
+        
+        if (timeoutSeconds > 0) {
+            clientBuilder
+                .connectTimeout(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS)
+        }
+        
+        val client = clientBuilder.build()
+        
+        val requestBody = org.json.JSONObject().apply {
+            put("folder_path", folder.pcPath)
+            put("old_path", oldPath)
+            put("new_path", newPath)
+        }.toString().toRequestBody("application/json".toMediaType())
+        
+        val request = okhttp3.Request.Builder()
+            .url("$serverUrl/api/rename")
+            .post(requestBody)
+            .build()
+        
+        client.newCall(request).execute().use { response ->
+            response.isSuccessful
+        }
+    } catch (e: Exception) {
+        android.util.Log.e("FolderSync", "Error renaming file on PC: ${e.message}")
+        false
+    }
 }
 
 fun compareAndFilterFiles(
@@ -1585,22 +1710,27 @@ fun compareAndFilterFiles(
                 
                 when {
                     matchingPcFile == null -> {
-                        // File doesn't exist on PC, upload it
                         filesToSync.add(FileToSync(androidFile, null, SyncAction.UPLOAD))
                         android.util.Log.i("FolderSync", "📱→💻 ✅ WILL UPLOAD new file: $fullPath")
                     }
-                    androidFile.lastModified > matchingPcFile.lastModified -> {
-                        // Android file is newer, update PC file
-                        filesToSync.add(FileToSync(androidFile, matchingPcFile, SyncAction.UPDATE))
-                        android.util.Log.i("FolderSync", "📱→💻 🔄 WILL UPDATE PC file: $fullPath (Android newer)")
+                    androidFile.size != matchingPcFile.size -> {
+                        if (androidFile.lastModified > matchingPcFile.lastModified) {
+                            filesToSync.add(FileToSync(androidFile, matchingPcFile, SyncAction.UPDATE))
+                            android.util.Log.i("FolderSync", "📱→💻 🔄 WILL UPDATE PC file: $fullPath (different size, Android newer)")
+                        } else {
+                            android.util.Log.i("FolderSync", "📱→💻 ⏭️ SKIPPING: $fullPath (different size, PC newer)")
+                        }
                     }
-                    androidFile.lastModified < matchingPcFile.lastModified -> {
-                        // PC file is newer, skip (or could update Android if bidirectional)
-                        android.util.Log.i("FolderSync", "📱→💻 ⏭️ SKIPPING older file: $fullPath (PC file is newer)")
+                    kotlin.math.abs(androidFile.lastModified - matchingPcFile.lastModified) > 2000 -> {
+                        if (androidFile.lastModified > matchingPcFile.lastModified) {
+                            filesToSync.add(FileToSync(androidFile, matchingPcFile, SyncAction.UPDATE))
+                            android.util.Log.i("FolderSync", "📱→💻 🔄 WILL UPDATE PC file: $fullPath (Android newer)")
+                        } else {
+                            android.util.Log.i("FolderSync", "📱→💻 ⏭️ SKIPPING: $fullPath (PC newer)")
+                        }
                     }
                     else -> {
-                        // Same modification time, skip
-                        android.util.Log.i("FolderSync", "📱→💻 ⏭️ SKIPPING identical file: $fullPath (same modification time)")
+                        android.util.Log.i("FolderSync", "📱→💻 ⏭️ SKIPPING identical file: $fullPath")
                     }
                 }
             }
@@ -1623,22 +1753,27 @@ fun compareAndFilterFiles(
                 
                 when {
                     matchingAndroidFile == null -> {
-                        // File doesn't exist on Android, download it
                         filesToSync.add(FileToSync(null, pcFile, SyncAction.DOWNLOAD))
                         android.util.Log.i("FolderSync", "💻→📱 ✅ WILL DOWNLOAD new file: ${pcFile.path}")
                     }
-                    pcFile.lastModified > matchingAndroidFile.lastModified -> {
-                        // PC file is newer, update Android file
-                        filesToSync.add(FileToSync(matchingAndroidFile, pcFile, SyncAction.UPDATE))
-                        android.util.Log.i("FolderSync", "💻→📱 🔄 WILL UPDATE Android file: ${pcFile.path} (PC newer)")
+                    pcFile.size != matchingAndroidFile.size -> {
+                        if (pcFile.lastModified > matchingAndroidFile.lastModified) {
+                            filesToSync.add(FileToSync(matchingAndroidFile, pcFile, SyncAction.UPDATE))
+                            android.util.Log.i("FolderSync", "💻→📱 🔄 WILL UPDATE Android file: ${pcFile.path} (different size, PC newer)")
+                        } else {
+                            android.util.Log.i("FolderSync", "💻→📱 ⏭️ SKIPPING: ${pcFile.path} (different size, Android newer)")
+                        }
                     }
-                    pcFile.lastModified < matchingAndroidFile.lastModified -> {
-                        // Android file is newer, skip (or could update PC if bidirectional)
-                        android.util.Log.i("FolderSync", "💻→📱 ⏭️ SKIPPING older file: ${pcFile.path} (Android file is newer)")
+                    kotlin.math.abs(pcFile.lastModified - matchingAndroidFile.lastModified) > 2000 -> {
+                        if (pcFile.lastModified > matchingAndroidFile.lastModified) {
+                            filesToSync.add(FileToSync(matchingAndroidFile, pcFile, SyncAction.UPDATE))
+                            android.util.Log.i("FolderSync", "💻→📱 🔄 WILL UPDATE Android file: ${pcFile.path} (PC newer)")
+                        } else {
+                            android.util.Log.i("FolderSync", "💻→📱 ⏭️ SKIPPING: ${pcFile.path} (Android newer)")
+                        }
                     }
                     else -> {
-                        // Same modification time, skip
-                        android.util.Log.i("FolderSync", "💻→📱 ⏭️ SKIPPING identical file: ${pcFile.path} (same modification time)")
+                        android.util.Log.i("FolderSync", "💻→📱 ⏭️ SKIPPING identical file: ${pcFile.path}")
                     }
                 }
             }

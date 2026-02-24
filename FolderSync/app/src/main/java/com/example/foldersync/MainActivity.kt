@@ -46,6 +46,7 @@ import java.io.File
 class MainActivity : ComponentActivity() {
     
     private var pendingFolderUri: Uri? = null
+    private var folderNeedingPermission: SyncFolder? = null
     private var showAddFolderDialog by mutableStateOf(false)
     private var pendingImportCallback: ((List<SyncFolder>, String) -> Unit)? = null
     private var pendingExportData: SyncBackup? = null
@@ -68,12 +69,26 @@ class MainActivity : ComponentActivity() {
                 Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             )
             
-            // Add to pending folder creation
-            pendingFolderUri = selectedUri
-            showAddFolderDialog = true
-            
-            // Debug: Show what was selected
-            Toast.makeText(this, "Selected: ${selectedUri.path}", Toast.LENGTH_SHORT).show()
+            // Check if we're updating an existing folder's permission
+            if (folderNeedingPermission != null) {
+                // Update the URI for the existing folder
+                val currentFolders = loadSyncFolders(this)
+                val updatedFolders = currentFolders.map { folder ->
+                    if (folder.id == folderNeedingPermission!!.id) {
+                        folder.copy(androidUriString = selectedUri.toString())
+                    } else {
+                        folder
+                    }
+                }
+                saveSyncFolders(this, updatedFolders)
+                Toast.makeText(this, "Permission updated for ${folderNeedingPermission!!.name}", Toast.LENGTH_SHORT).show()
+                folderNeedingPermission = null
+            } else {
+                // Add to pending folder creation
+                pendingFolderUri = selectedUri
+                showAddFolderDialog = true
+                Toast.makeText(this, "Selected: ${selectedUri.path}", Toast.LENGTH_SHORT).show()
+            }
         }
     }
     
@@ -130,7 +145,11 @@ class MainActivity : ComponentActivity() {
                     },
                     onExportSettings = ::exportSyncFolders,
                     onImportSettings = ::importSyncFolders,
-                    onUpdateKeepScreenOn = ::updateKeepScreenOn
+                    onUpdateKeepScreenOn = ::updateKeepScreenOn,
+                    onResetFolderPermission = { folder ->
+                        folderNeedingPermission = folder
+                        folderPickerLauncher.launch(null)
+                    }
                 )
             }
         }
@@ -164,7 +183,8 @@ fun MainScreen(
     onAddFolderDialogDismiss: () -> Unit,
     onExportSettings: (List<SyncFolder>, String) -> Unit,
     onImportSettings: ((List<SyncFolder>, String) -> Unit) -> Unit,
-    onUpdateKeepScreenOn: (Boolean) -> Unit
+    onUpdateKeepScreenOn: (Boolean) -> Unit,
+    onResetFolderPermission: (SyncFolder) -> Unit
 ) {
     val context = LocalContext.current
     val sharedPrefs = context.getSharedPreferences("folder_sync_prefs", Context.MODE_PRIVATE)
@@ -290,7 +310,10 @@ fun MainScreen(
                                     saveSyncFolders(context, syncFolders)
                                 }
                             },
-                            canMoveUp = index > 0
+                            canMoveUp = index > 0,
+                            onResetPermission = {
+                                onResetFolderPermission(folder)
+                            }
                         )
                     }
                 }
@@ -451,7 +474,8 @@ fun SyncFolderCard(
     onAdvancedSettings: () -> Unit,
     onIgnoreList: () -> Unit,
     onMoveUp: () -> Unit,
-    canMoveUp: Boolean
+    canMoveUp: Boolean,
+    onResetPermission: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth()
@@ -589,6 +613,17 @@ fun SyncFolderCard(
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        // Reset Permission button
+                        IconButton(
+                            onClick = onResetPermission
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Reset Permission",
+                                tint = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
+                        
                         // Settings button
                         IconButton(
                             onClick = onAdvancedSettings
@@ -838,13 +873,29 @@ fun AddFolderDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 
-                OutlinedTextField(
-                    value = androidPath,
-                    onValueChange = { androidPath = it },
-                    label = { Text("Android Path") },
-                    placeholder = { Text("/storage/emulated/0/DCIM/Camera") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                // Android Path with Reset Permission button
+                Text("Android Path:", fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = androidPath,
+                        onValueChange = { androidPath = it },
+                        placeholder = { Text("/storage/emulated/0/DCIM/Camera") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    Button(
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier.height(56.dp)
+                    ) {
+                        Text("📁")
+                    }
+                }
                 
                 OutlinedTextField(
                     value = pcPath,

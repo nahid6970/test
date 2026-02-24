@@ -23,6 +23,9 @@ if not os.path.exists(SYNC_BASE_FOLDER):
 sync_status = {}
 sync_lock = threading.Lock()
 
+# Hash cache
+hash_cache = {}
+
 def create_safe_filename(filename):
     """Create a safe filename that preserves spaces and most special characters"""
     # Split path into components to handle directories
@@ -51,18 +54,29 @@ def create_safe_filename(filename):
     return safe_filename
 
 def get_file_hash(file_path):
-    """Calculate MD5 hash of a file"""
-    hash_md5 = hashlib.md5()
+    """Calculate MD5 hash with caching"""
     try:
+        stat = os.stat(file_path)
+        cache_key = file_path
+        
+        if cache_key in hash_cache:
+            cached = hash_cache[cache_key]
+            if cached['modified'] == stat.st_mtime and cached['size'] == stat.st_size:
+                return cached['hash']
+        
+        hash_md5 = hashlib.md5()
         with open(file_path, "rb") as f:
-            for chunk in iter(lambda: f.read(4096), b""):
+            for chunk in iter(lambda: f.read(65536), b""):
                 hash_md5.update(chunk)
-        return hash_md5.hexdigest()
+        
+        hash_value = hash_md5.hexdigest()
+        hash_cache[cache_key] = {'hash': hash_value, 'modified': stat.st_mtime, 'size': stat.st_size}
+        return hash_value
     except:
         return None
 
-def scan_directory(directory_path):
-    """Scan directory and return file information"""
+def scan_directory(directory_path, include_hash=False):
+    """Scan directory - hash optional for speed"""
     files_info = []
     
     if not os.path.exists(directory_path):
@@ -75,12 +89,14 @@ def scan_directory(directory_path):
             
             try:
                 stat = os.stat(file_path)
-                files_info.append({
-                    'path': relative_path.replace('\\', '/'),  # Normalize path separators
+                file_info = {
+                    'path': relative_path.replace('\\', '/'),
                     'size': stat.st_size,
-                    'modified': stat.st_mtime,
-                    'hash': get_file_hash(file_path)
-                })
+                    'modified': stat.st_mtime
+                }
+                if include_hash:
+                    file_info['hash'] = get_file_hash(file_path)
+                files_info.append(file_info)
             except:
                 continue
     
@@ -162,6 +178,62 @@ def scan_folder():
     except Exception as e:
         print(f"❌ Scan error: {e}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/hash-files', methods=['POST'])
+def hash_files():
+    """Calculate hashes for specific files"""
+    try:
+        data = request.get_json()
+        folder_path = data.get('folder_path', '')
+        file_paths = data.get('file_paths', [])
+        
+        if not folder_path or not file_paths:
+            return jsonify({'error': 'folder_path and file_paths required'}), 400
+        
+        target_folder = os.path.join(SYNC_BASE_FOLDER, folder_path) if not os.path.isabs(folder_path) else folder_path
+        
+        hashed_files = []
+        for file_path in file_paths:
+            full_path = os.path.join(target_folder, file_path)
+            if os.path.exists(full_path) and os.path.isfile(full_path):
+                file_hash = get_file_hash(full_path)
+                if file_hash:
+                    hashed_files.append({'path': file_path, 'hash': file_hash})
+        
+        return jsonify({'hashed_files': hashed_files, 'total_hashed': len(hashed_files)})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/rename', methods=['POST'])
+def rename_file():
+    """Rename file on PC"""
+    try:
+        data = request.get_json()
+        folder_path = data.get('folder_path', '')
+        old_path = data.get('old_path', '')
+        new_path = data.get('new_path', '')
+        
+        if not folder_path or not old_path or not new_path:
+            return jsonify({'error': 'folder_path, old_path, new_path required'}), 400
+        
+        target_folder = os.path.join(SYNC_BASE_FOLDER, folder_path) if not os.path.isabs(folder_path) else folder_path
+        old_full = os.path.join(target_folder, old_path)
+        new_full = os.path.join(target_folder, new_path)
+        
+        if not os.path.exists(old_full):
+            return jsonify({'error': 'Old file not found'}), 404
+        
+        new_dir = os.path.dirname(new_full)
+        if new_dir and not os.path.exists(new_dir):
+            os.makedirs(new_dir, exist_ok=True)
+        
+        os.rename(old_full, new_full)
+        print(f"✅ Renamed: '{old_path}' → '{new_path}'")
+        
+        return jsonify({'success': True, 'message': f'Renamed {old_path} to {new_path}'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
