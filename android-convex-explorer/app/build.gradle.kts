@@ -4,15 +4,14 @@ plugins {
 }
 
 android {
-    namespace = "com.example.myapplication"
-    compileSdk {
-        version = release(36)
-    }
+    namespace = "com.mycloud.filesexplorer"
+    compileSdk = 34
+    buildToolsVersion = "34.0.0"
 
     defaultConfig {
-        applicationId = "com.example.myapplication"
+        applicationId = "com.mycloud.filesexplorer"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
@@ -41,6 +40,10 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
+    implementation(libs.androidx.recyclerview)
+    implementation(libs.okhttp)
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.gson)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -1,0 +1,80 @@
+package com.mycloud.filesexplorer
+
+import android.content.Intent
+import android.net.Uri
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageView
+import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
+import androidx.recyclerview.widget.RecyclerView
+
+class FileAdapter(
+    private var files: List<FileItem>,
+    private val onDelete: (FileItem) -> Unit
+) : RecyclerView.Adapter<FileAdapter.FileViewHolder>() {
+
+    class FileViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val fileName: TextView = view.findViewById(R.id.fileName)
+        val fileInfo: TextView = view.findViewById(R.id.fileInfo)
+        val fileIcon: ImageView = view.findViewById(R.id.fileIcon)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FileViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_file, parent, false)
+        return FileViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: FileViewHolder, position: Int) {
+        val file = files[position]
+        holder.fileName.text = file.filename
+        holder.fileInfo.text = formatFileSize(file.fileSize)
+        
+        holder.fileIcon.setImageResource(getFileIcon(file.fileType))
+
+        holder.itemView.setOnClickListener {
+            file.url?.let { url ->
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                holder.itemView.context.startActivity(intent)
+            }
+        }
+
+        holder.itemView.setOnLongClickListener {
+            AlertDialog.Builder(holder.itemView.context)
+                .setTitle("Delete File")
+                .setMessage("Are you sure you want to delete ${file.filename}?")
+                .setPositiveButton("Delete") { _, _ -> onDelete(file) }
+                .setNegativeButton("Cancel", null)
+                .show()
+            true
+        }
+    }
+
+    override fun getItemCount() = files.size
+
+    fun updateFiles(newFiles: List<FileItem>) {
+        files = newFiles
+        notifyDataSetChanged()
+    }
+
+    private fun getFileIcon(type: String): Int {
+        return when {
+            type.startsWith("image/") -> android.R.drawable.ic_menu_gallery
+            type.startsWith("video/") -> android.R.drawable.ic_media_play
+            type.contains("pdf") -> android.R.drawable.ic_menu_edit
+            else -> android.R.drawable.ic_menu_save
+        }
+    }
+
+    private fun formatFileSize(size: Long): String {
+        val units = arrayOf("B", "KB", "MB", "GB", "TB")
+        var digitGroups = 0
+        var s = size.toDouble()
+        while (s >= 1024 && digitGroups < units.size - 1) {
+            s /= 1024
+            digitGroups++
+        }
+        return String.format("%.2f %s", s, units[digitGroups])
+    }
+}
