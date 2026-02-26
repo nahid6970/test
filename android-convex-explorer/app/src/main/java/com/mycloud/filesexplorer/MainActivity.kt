@@ -149,17 +149,21 @@ class MainActivity : AppCompatActivity() {
                     cacheFile
                 )
 
-                val intent = Intent(Intent.ACTION_VIEW)
-                intent.setDataAndType(contentUri, mimeType)
-                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                
-                // Set explicit package for APKs
                 if (mimeType == "application/vnd.android.package-archive") {
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(contentUri, mimeType)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    startActivity(installIntent)
+                } else {
+                    val intent = Intent(Intent.ACTION_VIEW)
+                    intent.setDataAndType(contentUri, mimeType)
+                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    
+                    val chooser = Intent.createChooser(intent, "Open with")
+                    startActivity(chooser)
                 }
-
-                val chooser = Intent.createChooser(intent, "Open with")
-                startActivity(chooser)
             } catch (e: Exception) {
                 Toast.makeText(this@MainActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
             }
