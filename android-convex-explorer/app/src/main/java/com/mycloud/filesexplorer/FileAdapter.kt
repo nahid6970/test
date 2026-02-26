@@ -12,6 +12,8 @@ import androidx.recyclerview.widget.RecyclerView
 
 class FileAdapter(
     private var files: List<FileItem>,
+    private val onFolderClick: (String) -> Unit,
+    private val onFileClick: (FileItem) -> Unit,
     private val onDelete: (FileItem) -> Unit
 ) : RecyclerView.Adapter<FileAdapter.FileViewHolder>() {
 
@@ -29,24 +31,33 @@ class FileAdapter(
     override fun onBindViewHolder(holder: FileViewHolder, position: Int) {
         val file = files[position]
         holder.fileName.text = file.filename
-        holder.fileInfo.text = formatFileSize(file.fileSize)
         
-        holder.fileIcon.setImageResource(getFileIcon(file.fileType))
+        if (file.fileType == "folder") {
+            holder.fileInfo.visibility = View.GONE
+            holder.fileIcon.setImageResource(android.R.drawable.ic_menu_directions)
+        } else {
+            holder.fileInfo.visibility = View.VISIBLE
+            holder.fileInfo.text = formatFileSize(file.fileSize)
+            holder.fileIcon.setImageResource(getFileIcon(file.fileType))
+        }
 
         holder.itemView.setOnClickListener {
-            file.url?.let { url ->
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                holder.itemView.context.startActivity(intent)
+            if (file.fileType == "folder") {
+                onFolderClick(file.filename)
+            } else {
+                onFileClick(file)
             }
         }
 
         holder.itemView.setOnLongClickListener {
-            AlertDialog.Builder(holder.itemView.context)
-                .setTitle("Delete File")
-                .setMessage("Are you sure you want to delete ${file.filename}?")
-                .setPositiveButton("Delete") { _, _ -> onDelete(file) }
-                .setNegativeButton("Cancel", null)
-                .show()
+            if (file.fileType != "folder") {
+                AlertDialog.Builder(holder.itemView.context)
+                    .setTitle("Delete File")
+                    .setMessage("Are you sure you want to delete ${file.filename}?")
+                    .setPositiveButton("Delete") { _, _ -> onDelete(file) }
+                    .setNegativeButton("Cancel", null)
+                    .show()
+            }
             true
         }
     }

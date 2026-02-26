@@ -5,6 +5,7 @@ data class FileItem(
     val filename: String,
     val fileType: String,
     val fileSize: Long,
-    val storageId: String,
-    val url: String? = null
+    val storageId: String?,
+    val url: String? = null,
+    val group: String? = null
 )
