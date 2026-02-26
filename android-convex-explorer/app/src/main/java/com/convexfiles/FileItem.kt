@@ -1,4 +1,4 @@
-package com.example.myapplication
+package com.convexfiles
 
 data class FileItem(
     val id: String,
