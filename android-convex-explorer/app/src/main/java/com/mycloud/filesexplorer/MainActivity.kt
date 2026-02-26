@@ -14,6 +14,13 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
 
+import androidx.core.content.FileProvider
+import java.io.File
+import java.io.FileOutputStream
+import java.net.URL
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
 class MainActivity : AppCompatActivity() {
     private val client = ConvexClient()
     private lateinit var adapter: FileAdapter
@@ -122,15 +129,55 @@ class MainActivity : AppCompatActivity() {
                     return@launch
                 }
 
+                Toast.makeText(this@MainActivity, "Preparing file...", Toast.LENGTH_SHORT).show()
+
+                // Download to temporary cache file
+                val cacheFile = withContext(Dispatchers.IO) {
+                    val outputFile = File(cacheDir, file.filename)
+                    URL(url).openStream().use { input ->
+                        FileOutputStream(outputFile).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    outputFile
+                }
+
+                val mimeType = getMimeType(file.filename, file.fileType)
+                val contentUri = FileProvider.getUriForFile(
+                    this@MainActivity,
+                    "${packageName}.fileprovider",
+                    cacheFile
+                )
+
                 val intent = Intent(Intent.ACTION_VIEW)
-                intent.setDataAndType(Uri.parse(url), file.fileType)
+                intent.setDataAndType(contentUri, mimeType)
                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                
+                // Set explicit package for APKs
+                if (mimeType == "application/vnd.android.package-archive") {
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
 
                 val chooser = Intent.createChooser(intent, "Open with")
                 startActivity(chooser)
             } catch (e: Exception) {
-                Toast.makeText(this@MainActivity, "Error opening file: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
             }
+        }
+    }
+
+    private fun getMimeType(filename: String, type: String): String {
+        val extension = filename.substringAfterLast('.', "").lowercase()
+        return when (extension) {
+            "pdf" -> "application/pdf"
+            "apk" -> "application/vnd.android.package-archive"
+            "zip" -> "application/zip"
+            "rar" -> "application/x-rar-compressed"
+            "7z" -> "application/x-7z-compressed"
+            "jpg", "jpeg" -> "image/jpeg"
+            "png" -> "image/png"
+            "mp4" -> "video/mp4"
+            else -> if (type.contains("/")) type else "application/octet-stream"
         }
     }
 
