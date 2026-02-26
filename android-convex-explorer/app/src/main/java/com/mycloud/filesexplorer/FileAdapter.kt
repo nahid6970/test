@@ -86,11 +86,15 @@ class FileAdapter(
         val ext = filename.substringAfterLast('.', "").lowercase()
         return when {
             type == "folder" -> IconInfo(R.drawable.ic_folder, "#FFB300", "#FFF8E1") // Amber
-            type.startsWith("image/") -> IconInfo(R.drawable.ic_image, "#2E7D32", "#E8F5E9") // Green
-            type.startsWith("video/") -> IconInfo(R.drawable.ic_video, "#1565C0", "#E3F2FD") // Blue
-            type.contains("pdf") || ext == "pdf" -> IconInfo(R.drawable.ic_pdf, "#C62828", "#FFEBEE") // Red
+            type.startsWith("image/") || ext in listOf("jpg", "jpeg", "png", "webp", "gif") -> 
+                IconInfo(R.drawable.ic_image, "#2E7D32", "#E8F5E9") // Green
+            type.startsWith("video/") || ext in listOf("mp4", "mkv", "mov", "avi") -> 
+                IconInfo(R.drawable.ic_video, "#1565C0", "#E3F2FD") // Blue
+            type.contains("pdf", ignoreCase = true) || ext == "pdf" -> 
+                IconInfo(R.drawable.ic_pdf, "#C62828", "#FFEBEE") // Red
             ext == "apk" -> IconInfo(R.drawable.ic_android, "#3DDC84", "#E8FAF0") // Android Green
-            ext in listOf("zip", "rar", "7z", "tar", "gz") -> IconInfo(R.drawable.ic_archive, "#EF6C00", "#FFF3E0") // Orange
+            ext in listOf("zip", "rar", "7z", "tar", "gz") -> 
+                IconInfo(R.drawable.ic_archive, "#EF6C00", "#FFF3E0") // Orange
             else -> IconInfo(R.drawable.ic_file, "#455A64", "#ECEFF1") // Grey
         }
     }
