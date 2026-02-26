@@ -1,8 +1,11 @@
 package com.mycloud.filesexplorer
 
+import android.app.DownloadManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
@@ -26,12 +29,13 @@ class MainActivity : AppCompatActivity() {
         
         adapter = FileAdapter(
             files = emptyList(),
-            onDelete = { file -> deleteFile(file) },
             onFolderClick = { folderName -> 
                 currentFolder = if (currentFolder == null) folderName else "$currentFolder/$folderName"
                 updateDisplay()
             },
-            onFileClick = { file -> openFile(file) }
+            onFileClick = { file -> openFile(file) },
+            onDownload = { file -> downloadFile(file) },
+            onDelete = { file -> deleteFile(file) }
         )
         recyclerView.adapter = adapter
 
@@ -117,6 +121,25 @@ class MainActivity : AppCompatActivity() {
             startActivity(chooser)
         } catch (e: Exception) {
             Toast.makeText(this, "No app found to open this file", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun downloadFile(file: FileItem) {
+        val url = file.url ?: return
+        try {
+            val request = DownloadManager.Request(Uri.parse(url))
+                .setTitle(file.filename)
+                .setDescription("Downloading file...")
+                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, file.filename)
+                .setAllowedOverMetered(true)
+                .setAllowedOverRoaming(true)
+
+            val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            downloadManager.enqueue(request)
+            Toast.makeText(this, "Download started", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Download failed: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 

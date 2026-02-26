@@ -14,6 +14,7 @@ class FileAdapter(
     private var files: List<FileItem>,
     private val onFolderClick: (String) -> Unit,
     private val onFileClick: (FileItem) -> Unit,
+    private val onDownload: (FileItem) -> Unit,
     private val onDelete: (FileItem) -> Unit
 ) : RecyclerView.Adapter<FileAdapter.FileViewHolder>() {
 
@@ -51,11 +52,15 @@ class FileAdapter(
 
         holder.itemView.setOnLongClickListener {
             if (file.fileType != "folder") {
+                val options = arrayOf("Download", "Delete")
                 AlertDialog.Builder(holder.itemView.context)
-                    .setTitle("Delete File")
-                    .setMessage("Are you sure you want to delete ${file.filename}?")
-                    .setPositiveButton("Delete") { _, _ -> onDelete(file) }
-                    .setNegativeButton("Cancel", null)
+                    .setTitle(file.filename)
+                    .setItems(options) { _, which ->
+                        when (which) {
+                            0 -> onDownload(file)
+                            1 -> onDelete(file)
+                        }
+                    }
                     .show()
             }
             true
