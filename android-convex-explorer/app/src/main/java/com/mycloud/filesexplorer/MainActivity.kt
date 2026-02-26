@@ -107,7 +107,7 @@ class MainActivity : AppCompatActivity() {
         finalItems.addAll(displayItems.sortedBy { it.filename })
         
         adapter.updateFiles(finalItems)
-        supportActionBar?.title = currentFolder ?: "My Files"
+        findViewById<android.widget.TextView>(R.id.breadcrumbText).text = currentFolder ?: "Root"
     }
 
     private fun openFile(file: FileItem) {

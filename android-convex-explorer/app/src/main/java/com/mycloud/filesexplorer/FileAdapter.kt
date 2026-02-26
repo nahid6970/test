@@ -7,7 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.recyclerview.widget.RecyclerView
 
 class FileAdapter(
@@ -35,7 +35,7 @@ class FileAdapter(
         
         if (file.fileType == "folder") {
             holder.fileInfo.visibility = View.GONE
-            holder.fileIcon.setImageResource(android.R.drawable.ic_menu_directions)
+            holder.fileIcon.setImageResource(R.drawable.ic_folder)
         } else {
             holder.fileInfo.visibility = View.VISIBLE
             holder.fileInfo.text = formatFileSize(file.fileSize)
@@ -53,7 +53,7 @@ class FileAdapter(
         holder.itemView.setOnLongClickListener {
             if (file.fileType != "folder") {
                 val options = arrayOf("Download", "Delete")
-                AlertDialog.Builder(holder.itemView.context)
+                MaterialAlertDialogBuilder(holder.itemView.context)
                     .setTitle(file.filename)
                     .setItems(options) { _, which ->
                         when (which) {
@@ -75,12 +75,7 @@ class FileAdapter(
     }
 
     private fun getFileIcon(type: String): Int {
-        return when {
-            type.startsWith("image/") -> android.R.drawable.ic_menu_gallery
-            type.startsWith("video/") -> android.R.drawable.ic_media_play
-            type.contains("pdf") -> android.R.drawable.ic_menu_edit
-            else -> android.R.drawable.ic_menu_save
-        }
+        return R.drawable.ic_file
     }
 
     private fun formatFileSize(size: Long): String {
