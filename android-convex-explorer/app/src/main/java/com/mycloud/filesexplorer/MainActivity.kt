@@ -111,35 +111,55 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openFile(file: FileItem) {
-        val url = file.url ?: return
-        val intent = Intent(Intent.ACTION_VIEW)
-        intent.setDataAndType(Uri.parse(url), file.fileType)
-        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        
-        val chooser = Intent.createChooser(intent, "Open with")
-        try {
-            startActivity(chooser)
-        } catch (e: Exception) {
-            Toast.makeText(this, "No app found to open this file", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            try {
+                val url = file.url ?: if (!file.storageId.isNullOrEmpty()) {
+                    client.getFileUrl(file.storageId)
+                } else null
+
+                if (url.isNullOrEmpty()) {
+                    Toast.makeText(this@MainActivity, "File URL not available", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+
+                val intent = Intent(Intent.ACTION_VIEW)
+                intent.setDataAndType(Uri.parse(url), file.fileType)
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+
+                val chooser = Intent.createChooser(intent, "Open with")
+                startActivity(chooser)
+            } catch (e: Exception) {
+                Toast.makeText(this@MainActivity, "Error opening file: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
     private fun downloadFile(file: FileItem) {
-        val url = file.url ?: return
-        try {
-            val request = DownloadManager.Request(Uri.parse(url))
-                .setTitle(file.filename)
-                .setDescription("Downloading file...")
-                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, file.filename)
-                .setAllowedOverMetered(true)
-                .setAllowedOverRoaming(true)
+        lifecycleScope.launch {
+            try {
+                val url = file.url ?: if (!file.storageId.isNullOrEmpty()) {
+                    client.getFileUrl(file.storageId)
+                } else null
 
-            val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-            downloadManager.enqueue(request)
-            Toast.makeText(this, "Download started", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            Toast.makeText(this, "Download failed: ${e.message}", Toast.LENGTH_LONG).show()
+                if (url.isNullOrEmpty()) {
+                    Toast.makeText(this@MainActivity, "Download URL not available", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+
+                val request = DownloadManager.Request(Uri.parse(url))
+                    .setTitle(file.filename)
+                    .setDescription("Downloading file...")
+                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                    .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, file.filename)
+                    .setAllowedOverMetered(true)
+                    .setAllowedOverRoaming(true)
+
+                val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                downloadManager.enqueue(request)
+                Toast.makeText(this@MainActivity, "Download started", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(this@MainActivity, "Download failed: ${e.message}", Toast.LENGTH_LONG).show()
+            }
         }
     }
 

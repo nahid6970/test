@@ -80,5 +80,42 @@ class ConvexClient {
         }
     }
 
+    suspend fun getFileUrl(storageId: String): String {
+        val json = gson.toJson(mapOf(
+            "path" to "files:getUrl",
+            "args" to mapOf("storageId" to storageId)
+        ))
+        val body = json.toRequestBody("application/json".toMediaType())
+        val request = Request.Builder()
+            .url("$baseUrl/api/query")
+            .post(body)
+            .build()
+
+        return suspendCancellableCoroutine { continuation ->
+            client.newCall(request).enqueue(object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    continuation.resumeWithException(e)
+                }
+
+                override fun onResponse(call: Call, response: Response) {
+                    val bodyString = response.body?.string()
+                    if (response.isSuccessful && bodyString != null) {
+                        try {
+                            val convexResponse = gson.fromJson<ConvexResponse<String>>(
+                                bodyString,
+                                object : TypeToken<ConvexResponse<String>>() {}.type
+                            )
+                            continuation.resume(convexResponse.value ?: "")
+                        } catch (e: Exception) {
+                            continuation.resumeWithException(e)
+                        }
+                    } else {
+                        continuation.resumeWithException(Exception("Failed to get URL: ${response.code}"))
+                    }
+                }
+            })
+        }
+    }
+
     private data class ConvexResponse<T>(val value: T?)
 }
