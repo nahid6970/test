@@ -39,7 +39,6 @@ class OverlayService : Service() {
 
     private lateinit var windowManager: WindowManager
     private var overlayView: View? = null
-    private lateinit var clockText: TextView
     private lateinit var stepInput: EditText
     private lateinit var addButton: Button
     private lateinit var autoButton: Button
@@ -47,7 +46,6 @@ class OverlayService : Service() {
     
     private var wakeLock: PowerManager.WakeLock? = null
     private val handler = Handler(Looper.getMainLooper())
-    private val clockFormat = SimpleDateFormat("hh:mm:ss a", Locale.getDefault())
     private val helperFormat = SimpleDateFormat("EEE, dd MMM yyyy  hh:mm a", Locale.getDefault())
     private val rootDateFormat = SimpleDateFormat("MMddHHmmyyyy.ss", Locale.getDefault())
     private val prefs by lazy { getSharedPreferences("ClockOverlayPrefs", MODE_PRIVATE) }
@@ -132,7 +130,6 @@ class OverlayService : Service() {
         }
 
         overlayView = LayoutInflater.from(this).inflate(R.layout.overlay_buttons, null)
-        clockText = overlayView!!.findViewById(R.id.clockText)
         stepInput = overlayView!!.findViewById(R.id.stepInput)
         addButton = overlayView!!.findViewById(R.id.addButton)
         autoButton = overlayView!!.findViewById(R.id.autoButton)
@@ -156,11 +153,10 @@ class OverlayService : Service() {
 
         windowManager.addView(overlayView, layoutParams)
         makeDraggable(overlayView!!, layoutParams)
-        startClockUpdates()
+        startUIUpdates()
     }
 
     private fun setupInputHandling() {
-        // Toggle focusability when clicking the EditText to show keyboard
         stepInput.setOnTouchListener { v, event ->
             if (event.action == MotionEvent.ACTION_UP) {
                 setFocusable(true)
@@ -190,7 +186,7 @@ class OverlayService : Service() {
                 val input = s.toString().toIntOrNull()
                 if (input != null && input in 1..1440) {
                     prefs.edit().putInt("stepMinutes", input).apply()
-                    updateDisplay(false) // Update button text but don't reset EditText
+                    updateUI(false)
                 }
             }
         })
@@ -212,12 +208,8 @@ class OverlayService : Service() {
         var initialTouchY = 0f
 
         view.setOnTouchListener { v, event ->
-            // If focusable, don't drag so we can interact with EditText
             if ((layoutParams.flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE) == 0) {
-                // If it's the EditText, don't drag
                 if (v == stepInput) return@setOnTouchListener false
-                
-                // If touch is outside EditText, clear focus
                 setFocusable(false)
                 stepInput.clearFocus()
                 val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
@@ -243,26 +235,22 @@ class OverlayService : Service() {
         }
     }
 
-    private fun startClockUpdates() {
+    private fun startUIUpdates() {
         handler.post(object : Runnable {
             override fun run() {
-                updateDisplay(true)
+                updateUI(true)
                 handler.postDelayed(this, 1000)
             }
         })
     }
 
-    private fun updateDisplay(updateInput: Boolean) {
-        val now = Calendar.getInstance()
+    private fun updateUI(syncInput: Boolean) {
         val step = getStepMinutes()
-        val target = Calendar.getInstance().apply {
-            timeInMillis = now.timeInMillis
-            add(Calendar.MINUTE, step)
-        }
-
-        clockText.text = clockFormat.format(now.time)
-        if (updateInput && !stepInput.isFocused) {
-            stepInput.setText(step.toString())
+        if (syncInput && !stepInput.isFocused) {
+            val currentText = stepInput.text.toString()
+            if (currentText != step.toString()) {
+                stepInput.setText(step.toString())
+            }
         }
         addButton.text = "+$step"
         autoButton.text = "Auto"
@@ -279,14 +267,11 @@ class OverlayService : Service() {
         val targetText = helperFormat.format(target.time)
         val rootFormatText = rootDateFormat.format(target.time)
 
-        // Disable auto_time before setting date
         val command = "settings put global auto_time 0 && date $rootFormatText && am broadcast -a android.intent.action.TIME_SET"
         
-        // Try root first
         if (runRootCommand(command)) {
             Toast.makeText(this, "Time advanced to $targetText (Root)", Toast.LENGTH_SHORT).show()
         } else {
-            // Fallback to manual
             copyToClipboard("Manual clock target", targetText)
             val intent = Intent(Settings.ACTION_DATE_SETTINGS).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -297,7 +282,6 @@ class OverlayService : Service() {
     }
 
     private fun handleTimeAuto() {
-        // Try root first to turn on automatic time
         if (runRootCommand("settings put global auto_time 1 && settings put global auto_time_zone 1")) {
             Toast.makeText(this, "Automatic time enabled (Root)", Toast.LENGTH_SHORT).show()
         } else {
