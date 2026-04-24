@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rootLayout"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="8dp"
+    android:background="@drawable/overlay_background"
+    android:elevation="8dp">
+
+    <TextView
+        android:id="@+id/clockText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="00:00:00"
+        android:textSize="20sp"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_gravity="center_horizontal" />
+
+    <TextView
+        android:id="@+id/stepText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Step 15 min"
+        android:textSize="10sp"
+        android:textColor="#D6E2EA"
+        android:gravity="center"
+        android:layout_marginTop="4dp"
+        android:layout_gravity="center_horizontal" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp"
+        android:layout_gravity="center_horizontal"
+        android:gravity="center_vertical">
+
+        <Button
+            android:id="@+id/addButton"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:text="+15"
+            android:textSize="14sp"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/button_background"
+            android:contentDescription="Open manual clock change"
+            android:padding="0dp" />
+
+        <Button
+            android:id="@+id/autoButton"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:text="Auto"
+            android:textSize="10sp"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/button_background"
+            android:contentDescription="Open automatic time settings"
+            android:layout_marginStart="6dp"
+            android:padding="0dp" />
+
+        <Button
+            android:id="@+id/closeButton"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:text="✕"
+            android:textSize="18sp"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/button_background"
+            android:contentDescription="Close Overlay"
+            android:layout_marginStart="6dp"
+            android:padding="0dp" />
+
+    </LinearLayout>
+
+</LinearLayout>

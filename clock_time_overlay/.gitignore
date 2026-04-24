@@ -1,0 +1,42 @@
+# Build artifacts
+bin/
+gen/
+out/
+build/
+app/build/
+.gradle/
+
+# Android Studio / IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+/captures/
+/externalNativeBuild/
+.cxx/
+
+# Local configuration
+local.properties
+
+# Log files
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+google-services.json
+
+# Gradle
+.gradle/
+build/
+
+# Signing files
+*.jks
+*.keystore
+/release/
+
+# Proguard
+app/proguard/
