@@ -42,7 +42,7 @@ class OverlayService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private val clockFormat = SimpleDateFormat("hh:mm:ss a", Locale.getDefault())
     private val helperFormat = SimpleDateFormat("EEE, dd MMM yyyy  hh:mm a", Locale.getDefault())
-    private val rootDateFormat = SimpleDateFormat("yyyyMMdd.HHmmss", Locale.getDefault())
+    private val rootDateFormat = SimpleDateFormat("MMddHHmmyyyy.ss", Locale.getDefault())
     private val prefs by lazy { getSharedPreferences("ClockOverlayPrefs", MODE_PRIVATE) }
 
     companion object {
@@ -207,8 +207,11 @@ class OverlayService : Service() {
         val targetText = helperFormat.format(target.time)
         val rootFormatText = rootDateFormat.format(target.time)
 
+        // Disable auto_time before setting date
+        val command = "settings put global auto_time 0 && date $rootFormatText"
+        
         // Try root first
-        if (runRootCommand("date -s \"$rootFormatText\"")) {
+        if (runRootCommand(command)) {
             Toast.makeText(this, "Time advanced to $targetText (Root)", Toast.LENGTH_SHORT).show()
         } else {
             // Fallback to manual
