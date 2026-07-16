@@ -13,3 +13,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Allow gradle-wrapper.jar to be committed
+!gradle/wrapper/gradle-wrapper.jar
+

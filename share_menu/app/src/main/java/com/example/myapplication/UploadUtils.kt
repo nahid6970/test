@@ -73,6 +73,10 @@ suspend fun uploadFilesWithProgress(
                     }
                 }
                 
+                val safeFilename = createSafeFilename(file.fileName)
+                val progressUrl = if (serverUrl.endsWith("/")) "${serverUrl}upload-progress" else "$serverUrl/upload-progress"
+                var lastReportTime = 0L
+
                 // Create progress tracking request body
                 val requestBody = ProgressRequestBody(
                     tempFile.asRequestBody("application/octet-stream".toMediaType()),
@@ -82,19 +86,36 @@ suspend fun uploadFilesWithProgress(
                     val elapsedTime = (currentTime - startTime) / 1000.0
                     val speed = if (elapsedTime > 0) bytesWritten / elapsedTime else 0.0
                     
+                    val pct = (bytesWritten.toFloat() / file.fileSize * 100).roundToInt()
                     progressList[index] = progressList[index].copy(
-                        progress = bytesWritten.toFloat() / file.fileSize,
+                        progress = pct.toFloat() / 100f,
                         uploadedBytes = bytesWritten,
                         uploadSpeed = formatSpeed(speed)
                     )
                     
+                    // Send progress update to server (throttled to 150ms)
+                    if (pct == 100 || (currentTime - lastReportTime >= 150)) {
+                        lastReportTime = currentTime
+                        val progressJson = """{"filename": "$safeFilename", "percent": $pct, "size_bytes": ${file.fileSize}}"""
+                        val progressRequest = Request.Builder()
+                            .url(progressUrl)
+                            .post(RequestBody.create("application/json".toMediaType(), progressJson))
+                            .build()
+                        
+                        client.newCall(progressRequest).enqueue(object : Callback {
+                            override fun onFailure(call: Call, e: IOException) {}
+                            override fun onResponse(call: Call, response: Response) {
+                                response.close()
+                            }
+                        })
+                    }
+
                     // Update UI on main thread
                     MainScope().launch {
                         onProgressUpdate(progressList.toList())
                     }
                 }
                 
-                val safeFilename = createSafeFilename(file.fileName)
                 val multipartBody = MultipartBody.Builder()
                     .setType(MultipartBody.FORM)
                     .addFormDataPart("file", safeFilename, requestBody)
