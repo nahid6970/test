@@ -93,21 +93,25 @@ suspend fun uploadFilesWithProgress(
                         uploadSpeed = formatSpeed(speed)
                     )
                     
-                    // Send progress update to server (throttled to 150ms)
+                    // Send progress update to server via UDP (throttled to 150ms) to bypass HTTP block
                     if (pct == 100 || (currentTime - lastReportTime >= 150)) {
                         lastReportTime = currentTime
-                        val progressJson = """{"filename": "$safeFilename", "percent": $pct, "size_bytes": ${file.fileSize}}"""
-                        val progressRequest = Request.Builder()
-                            .url(progressUrl)
-                            .post(RequestBody.create("application/json".toMediaType(), progressJson))
-                            .build()
                         
-                        client.newCall(progressRequest).enqueue(object : Callback {
-                            override fun onFailure(call: Call, e: IOException) {}
-                            override fun onResponse(call: Call, response: Response) {
-                                response.close()
+                        Thread {
+                            try {
+                                val uri = java.net.URI(serverUrl)
+                                val host = uri.host ?: "127.0.0.1"
+                                val msg = "$safeFilename|$pct|${file.fileSize}"
+                                val bytes = msg.toByteArray(Charsets.UTF_8)
+                                val socket = java.net.DatagramSocket()
+                                val address = java.net.InetAddress.getByName(host)
+                                val packet = java.net.DatagramPacket(bytes, bytes.size, address, 5009)
+                                socket.send(packet)
+                                socket.close()
+                            } catch (e: Exception) {
+                                e.printStackTrace()
                             }
-                        })
+                        }.start()
                     }
 
                     // Update UI on main thread

@@ -17,3 +17,9 @@ local.properties
 # Allow gradle-wrapper.jar to be committed
 !gradle/wrapper/gradle-wrapper.jar
 
+# Ensure Android icons and mipmaps are never ignored by Git
+!Android_ICON/
+!Android_ICON/**
+!**/src/main/res/mipmap-*/*.png
+!**/src/main/res/mipmap-*/*.xml
+
