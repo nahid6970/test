@@ -602,11 +602,6 @@ fun SyncFolderCard(
                             onCheckedChange = onToggleEnabled,
                             modifier = Modifier.scale(0.8f)
                         )
-                        Text(
-                            text = if (folder.isEnabled) "Enabled" else "Disabled",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (folder.isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
                     
                     // Action buttons
@@ -897,15 +892,99 @@ fun AddFolderDialog(
                     }
                 }
                 
-                OutlinedTextField(
-                    value = pcPath,
-                    onValueChange = { pcPath = it },
-                    label = { Text("PC Path") },
-                    placeholder = { Text("Movies or C:/Movies") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = pcPath,
+                        onValueChange = { pcPath = it },
+                        label = { Text("PC Path") },
+                        placeholder = { Text("Movies or C:/Movies") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    Button(
+                        onClick = {
+                            val sharedPrefs = context.getSharedPreferences("folder_sync_prefs", Context.MODE_PRIVATE)
+                            val dialogUrl = sharedPrefs.getString("server_url", "http://192.168.0.101:5016") ?: "http://192.168.0.101:5016"
+                            val currentBrowsePath = if (pcPath.isNotBlank()) pcPath else ""
+                            
+                            fun fetchPath(path: String) {
+                                val client = okhttp3.OkHttpClient()
+                                val encodedPath = java.net.URLEncoder.encode(path, "UTF-8")
+                                val req = okhttp3.Request.Builder()
+                                    .url("$dialogUrl/api/browse-pc?path=$encodedPath")
+                                    .build()
+                                client.newCall(req).enqueue(object : okhttp3.Callback {
+                                    override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
+                                        (context as? android.app.Activity)?.runOnUiThread {
+                                            Toast.makeText(context, "Could not connect to PC server", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                    override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                                        val bodyStr = response.body?.string() ?: ""
+                                        if (response.isSuccessful) {
+                                            try {
+                                                val json = org.json.JSONObject(bodyStr)
+                                                val itemsArr = json.getJSONArray("items")
+                                                val itemsList = mutableListOf<String>()
+                                                val pathsList = mutableListOf<String>()
+                                                for (i in 0 until itemsArr.length()) {
+                                                    val obj = itemsArr.getJSONObject(i)
+                                                    itemsList.add("📁 " + obj.getString("name"))
+                                                    pathsList.add(obj.getString("path"))
+                                                }
+                                                val curPath = json.optString("current_path", "")
+                                                val parentPath = json.optString("parent_path", "")
+                                                
+                                                val displayList = mutableListOf<String>()
+                                                val actionPaths = mutableListOf<String>()
+                                                
+                                                if (curPath.isNotBlank()) {
+                                                    displayList.add("✔ [Select Current Folder]")
+                                                    actionPaths.add("SELECT_CURRENT:$curPath")
+                                                    displayList.add("⬆ .. (Up)")
+                                                    actionPaths.add("GOTO:$parentPath")
+                                                }
+                                                
+                                                for (i in itemsList.indices) {
+                                                    displayList.add(itemsList[i])
+                                                    actionPaths.add("GOTO:" + pathsList[i])
+                                                }
+                                                
+                                                (context as? android.app.Activity)?.runOnUiThread {
+                                                    val builder = android.app.AlertDialog.Builder(context)
+                                                    builder.setTitle(if (curPath.isBlank()) "Select PC Drive/Folder" else curPath)
+                                                    builder.setItems(displayList.toTypedArray()) { d, which ->
+                                                        val target = actionPaths[which]
+                                                        if (target.startsWith("SELECT_CURRENT:")) {
+                                                            pcPath = target.removePrefix("SELECT_CURRENT:")
+                                                        } else if (target.startsWith("GOTO:")) {
+                                                            fetchPath(target.removePrefix("GOTO:"))
+                                                        }
+                                                    }
+                                                    builder.setNegativeButton("Cancel", null)
+                                                    builder.show()
+                                                }
+                                            } catch (e: Exception) {
+                                                (context as? android.app.Activity)?.runOnUiThread {
+                                                    Toast.makeText(context, "Error parsing server folder list", Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                        }
+                                    }
+                                })
+                            }
+                            fetchPath(currentBrowsePath)
+                        },
+                        modifier = Modifier.height(56.dp)
+                    ) {
+                        Text("💻")
+                    }
+                }
                 Text(
-                    text = "Use relative path (Movies) or absolute path (C:/Movies)",
+                    text = "Use relative path (Movies), absolute path (C:/Movies), or click 💻 to browse PC",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

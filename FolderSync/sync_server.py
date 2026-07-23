@@ -610,6 +610,57 @@ def perform_sync(sync_id, folders):
         
         print(f"❌ Sync {sync_id} failed: {e}")
 
+@app.route('/api/browse-pc', methods=['GET', 'POST'])
+def browse_pc():
+    """Browse directories on the PC"""
+    try:
+        data = request.get_json(silent=True) or {}
+        req_path = request.args.get('path') or data.get('path', '')
+        
+        if not req_path or req_path == '/':
+            # Return available drives on Windows or root dirs on Unix
+            if os.name == 'nt':
+                import string
+                from ctypes import windll
+                drives = []
+                bitmask = windll.kernel32.GetLogicalDrives()
+                for letter in string.ascii_uppercase:
+                    if bitmask & 1:
+                        drives.append({'name': f"{letter}:\\", 'path': f"{letter}:\\", 'is_dir': True})
+                    bitmask >>= 1
+                return jsonify({'current_path': '', 'items': drives})
+            else:
+                req_path = '/'
+
+        target_path = os.path.abspath(req_path)
+        if not os.path.exists(target_path) or not os.path.isdir(target_path):
+            return jsonify({'error': 'Path does not exist or is not a directory'}), 400
+
+        items = []
+        try:
+            for entry in os.scandir(target_path):
+                if entry.is_dir():
+                    items.append({
+                        'name': entry.name,
+                        'path': entry.path.replace('\\', '/'),
+                        'is_dir': True
+                    })
+        except PermissionError:
+            return jsonify({'error': 'Permission denied'}), 403
+
+        # Sort folders alphabetically
+        items.sort(key=lambda x: x['name'].lower())
+        
+        parent_path = os.path.dirname(target_path).replace('\\', '/') if os.path.dirname(target_path) != target_path else ''
+        
+        return jsonify({
+            'current_path': target_path.replace('\\', '/'),
+            'parent_path': parent_path,
+            'items': items
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/health')
 def health_check():
     """Health check endpoint"""
