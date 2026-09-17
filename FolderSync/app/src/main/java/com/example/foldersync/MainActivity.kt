@@ -12,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
 import androidx.documentfile.provider.DocumentFile
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -33,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.input.KeyboardType
@@ -516,19 +518,8 @@ fun SyncFolderCard(
                     }
                 }
                 
-                // Android Path (always first line)
-                Text(
-                    text = "📱 ${folder.androidPath}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                
-                // PC Path (always second line)
-                Text(
-                    text = "💻 ${folder.pcPath}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                MarqueePathRow("📱", folder.androidPath)
+                MarqueePathRow("💻", folder.pcPath)
                 
                 // Compact: Source → Type → Target
                 Row(
@@ -828,6 +819,36 @@ fun SettingsDialog(
             }
         }
     )
+}
+
+@Composable
+private fun MarqueePathRow(icon: String, path: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = icon,
+            modifier = Modifier.padding(end = 8.dp),
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Text(
+            text = path,
+            modifier = Modifier
+                .weight(1f)
+                .basicMarquee(
+                    iterations = Int.MAX_VALUE,
+                    animationMode = androidx.compose.foundation.MarqueeAnimationMode.Immediately,
+                    initialDelayMillis = 1000,
+                    repeatDelayMillis = 1000
+                ),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Clip
+        )
+    }
 }
 
 @Composable
