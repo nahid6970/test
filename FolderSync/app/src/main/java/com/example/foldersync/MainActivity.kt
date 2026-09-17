@@ -839,8 +839,8 @@ private fun MarqueePathRow(icon: String, path: String) {
                 .basicMarquee(
                     iterations = Int.MAX_VALUE,
                     animationMode = androidx.compose.foundation.MarqueeAnimationMode.Immediately,
-                    initialDelayMillis = 1000,
-                    repeatDelayMillis = 1000
+                    initialDelayMillis = 400,
+                    repeatDelayMillis = 300
                 ),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Refresh
@@ -89,6 +90,7 @@ fun SyncScreen(
     var isRunning by remember { mutableStateOf(false) }
     var overallProgress by remember { mutableStateOf(0f) }
     var currentTime by remember { mutableStateOf(System.currentTimeMillis()) }
+    val progressListState = rememberLazyListState()
     
     val scope = rememberCoroutineScope()
     
@@ -114,6 +116,18 @@ fun SyncScreen(
         while (syncStatuses.any { it.status == SyncState.SCANNING }) {
             currentTime = System.currentTimeMillis()
             delay(1000) // Update every second
+        }
+    }
+
+    // Keep the folder currently being scanned/synced visible. The key is the
+    // active folder index, so file-level progress updates do not repeatedly
+    // restart the scroll animation.
+    val activeFolderIndex = syncStatuses.indexOfFirst {
+        it.status == SyncState.SCANNING || it.status == SyncState.SYNCING
+    }
+    LaunchedEffect(activeFolderIndex) {
+        if (activeFolderIndex >= 0) {
+            progressListState.animateScrollToItem(activeFolderIndex)
         }
     }
     
@@ -168,6 +182,7 @@ fun SyncScreen(
             // Individual folder progress
             LazyColumn(
                 modifier = Modifier.weight(1f),
+                state = progressListState,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(syncFolders.zip(syncStatuses)) { (folder, status) ->
