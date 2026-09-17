@@ -1049,6 +1049,7 @@ fun loadSyncFolders(context: Context): List<SyncFolder> {
                 try {
                     // Try to access all fields and provide empty defaults if missing
                     folder.copy(
+                        comparisonMethod = folder.comparisonMethod ?: ComparisonMethod.FAST,
                         ignorePrefixes = folder.ignorePrefixes,
                         ignoreSuffixes = folder.ignoreSuffixes,
                         ignoreFolders = try { 
@@ -1167,6 +1168,7 @@ fun AdvancedSettingsDialog(
 ) {
     var androidToPcMode by remember { mutableStateOf(folder.androidToPcMode) }
     var pcToAndroidMode by remember { mutableStateOf(folder.pcToAndroidMode) }
+    var comparisonMethod by remember { mutableStateOf(folder.comparisonMethod) }
     
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1250,6 +1252,37 @@ fun AdvancedSettingsDialog(
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("File comparison method:", fontWeight = FontWeight.Bold)
+                ComparisonMethod.values().forEach { method ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        RadioButton(
+                            selected = comparisonMethod == method,
+                            onClick = { comparisonMethod = method }
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = when (method) {
+                                    ComparisonMethod.FAST -> "Fast (size and date)"
+                                    ComparisonMethod.FULL_HASH -> "Full content comparison (old method)"
+                                },
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = when (method) {
+                                    ComparisonMethod.FAST -> "Quick scan; uses file size and modification time"
+                                    ComparisonMethod.FULL_HASH -> "Hashes every file before syncing; slower but verifies identical contents"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
@@ -1257,7 +1290,8 @@ fun AdvancedSettingsDialog(
                 onClick = {
                     val updatedFolder = folder.copy(
                         androidToPcMode = androidToPcMode,
-                        pcToAndroidMode = pcToAndroidMode
+                        pcToAndroidMode = pcToAndroidMode,
+                        comparisonMethod = comparisonMethod
                     )
                     onSave(updatedFolder)
                 }

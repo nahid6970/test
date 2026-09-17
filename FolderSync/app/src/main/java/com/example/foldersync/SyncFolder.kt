@@ -13,6 +13,7 @@ data class SyncFolder(
     val syncDirection: SyncDirection = SyncDirection.ANDROID_TO_PC,
     val androidToPcMode: SyncMode = SyncMode.COPY_AND_DELETE,
     val pcToAndroidMode: SyncMode = SyncMode.COPY_AND_DELETE,
+    val comparisonMethod: ComparisonMethod = ComparisonMethod.FAST,
     val ignorePrefixes: String = "",
     val ignoreSuffixes: String = "",
     val ignoreFolders: String = "",
@@ -65,4 +66,9 @@ enum class SyncState {
     SYNCING,
     COMPLETED,
     ERROR
+}
+
+enum class ComparisonMethod {
+    FAST,
+    FULL_HASH
 }

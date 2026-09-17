@@ -586,7 +586,17 @@ suspend fun startSync(
                         android.util.Log.i("FolderSync", "🔍 Using Mirror mode for Android → PC sync")
                         val pcFiles = scanPcFolder(serverUrl, folder, context)
                         android.util.Log.i("FolderSync", "📊 Found ${androidFiles.size} Android files and ${pcFiles.size} PC files")
-                        compareAndFilterFiles(androidFiles, pcFiles, "📱→💻")
+                        val hashes = if (folder.comparisonMethod == ComparisonMethod.FULL_HASH) {
+                            calculateComparisonHashes(context, serverUrl, folder, androidFiles, pcFiles)
+                        } else null
+                        compareAndFilterFiles(
+                            androidFiles,
+                            pcFiles,
+                            "📱→💻",
+                            folder.comparisonMethod,
+                            hashes?.first ?: emptyMap(),
+                            hashes?.second ?: emptyMap()
+                        )
                     } else {
                         android.util.Log.i("FolderSync", "📤 Using ${folder.androidToPcMode} mode for Android → PC sync")
                         androidFiles.map { FileToSync(it, null, SyncAction.UPLOAD) }
@@ -754,7 +764,17 @@ suspend fun startSync(
                         android.util.Log.i("FolderSync", "🔍 Using Mirror mode for PC → Android sync")
                         val androidFiles = scanAndroidFolder(context, folder)
                         android.util.Log.i("FolderSync", "📊 Found ${pcFiles.size} PC files and ${androidFiles.size} Android files")
-                        compareAndFilterFiles(androidFiles, pcFiles, "💻→📱")
+                        val hashes = if (folder.comparisonMethod == ComparisonMethod.FULL_HASH) {
+                            calculateComparisonHashes(context, serverUrl, folder, androidFiles, pcFiles)
+                        } else null
+                        compareAndFilterFiles(
+                            androidFiles,
+                            pcFiles,
+                            "💻→📱",
+                            folder.comparisonMethod,
+                            hashes?.first ?: emptyMap(),
+                            hashes?.second ?: emptyMap()
+                        )
                     } else {
                         android.util.Log.i("FolderSync", "📥 Using ${folder.pcToAndroidMode} mode for PC → Android sync")
                         pcFiles.map { FileToSync(null, it, SyncAction.DOWNLOAD) }
@@ -1650,6 +1670,25 @@ suspend fun fetchPcFileHashes(serverUrl: String, folder: SyncFolder, filePaths: 
     }
 }
 
+suspend fun calculateComparisonHashes(
+    context: Context,
+    serverUrl: String,
+    folder: SyncFolder,
+    androidFiles: List<AndroidFile>,
+    pcFiles: List<PcFile>
+): Pair<Map<String, String>, Map<String, String>> {
+    android.util.Log.i("FolderSync", "🔐 Full comparison: hashing ${androidFiles.size} Android files")
+    val androidHashes = androidFiles.mapNotNull { file ->
+        val path = if (file.relativePath.isEmpty()) file.name else "${file.relativePath}/${file.name}"
+        calculateAndroidFileHash(context, file)?.let { path to it }
+    }.toMap()
+
+    android.util.Log.i("FolderSync", "🔐 Full comparison: hashing ${pcFiles.size} PC files")
+    val pcHashes = fetchPcFileHashes(serverUrl, folder, pcFiles.map { it.path }, context)
+    android.util.Log.i("FolderSync", "✅ Full comparison scan complete")
+    return androidHashes to pcHashes
+}
+
 suspend fun renameFileOnPc(serverUrl: String, folder: SyncFolder, oldPath: String, newPath: String, context: Context): Boolean = withContext(kotlinx.coroutines.Dispatchers.IO) {
     try {
         val timeoutSeconds = getTimeoutSeconds(context)
@@ -1686,7 +1725,10 @@ suspend fun renameFileOnPc(serverUrl: String, folder: SyncFolder, oldPath: Strin
 fun compareAndFilterFiles(
     androidFiles: List<AndroidFile>,
     pcFiles: List<PcFile>,
-    direction: String
+    direction: String,
+    comparisonMethod: ComparisonMethod = ComparisonMethod.FAST,
+    androidHashes: Map<String, String> = emptyMap(),
+    pcHashes: Map<String, String> = emptyMap()
 ): List<FileToSync> {
     val filesToSync = mutableListOf<FileToSync>()
     
@@ -1707,11 +1749,17 @@ fun compareAndFilterFiles(
                 }
                 
                 val matchingPcFile = pcFileMap[fullPath]
+                val sameContent = comparisonMethod == ComparisonMethod.FULL_HASH &&
+                    androidHashes[fullPath] != null &&
+                    androidHashes[fullPath] == pcHashes[fullPath]
                 
                 when {
                     matchingPcFile == null -> {
                         filesToSync.add(FileToSync(androidFile, null, SyncAction.UPLOAD))
                         android.util.Log.i("FolderSync", "📱→💻 ✅ WILL UPLOAD new file: $fullPath")
+                    }
+                    sameContent -> {
+                        android.util.Log.i("FolderSync", "📱→💻 ⏭️ SKIPPING identical content: $fullPath")
                     }
                     androidFile.size != matchingPcFile.size -> {
                         if (androidFile.lastModified > matchingPcFile.lastModified) {
@@ -1750,11 +1798,17 @@ fun compareAndFilterFiles(
             // PC to Android sync - check which PC files need to be downloaded
             pcFiles.forEach { pcFile ->
                 val matchingAndroidFile = androidFileMap[pcFile.path]
+                val sameContent = comparisonMethod == ComparisonMethod.FULL_HASH &&
+                    pcHashes[pcFile.path] != null &&
+                    pcHashes[pcFile.path] == androidHashes[pcFile.path]
                 
                 when {
                     matchingAndroidFile == null -> {
                         filesToSync.add(FileToSync(null, pcFile, SyncAction.DOWNLOAD))
                         android.util.Log.i("FolderSync", "💻→📱 ✅ WILL DOWNLOAD new file: ${pcFile.path}")
+                    }
+                    sameContent -> {
+                        android.util.Log.i("FolderSync", "💻→📱 ⏭️ SKIPPING identical content: ${pcFile.path}")
                     }
                     pcFile.size != matchingAndroidFile.size -> {
                         if (pcFile.lastModified > matchingAndroidFile.lastModified) {
